@@ -52,4 +52,38 @@ Wordle 734 4/6
         var result = WordleProcessor.Validate(sample);
         result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.InvalidLineLength));
     }
+
+    [Fact]
+    public void Validate_BadAttemptsTooFew()
+    {
+        var sample = """
+Wordle 734 4/6
+
+⬜🟨⬜⬜⬜
+⬜🟨⬜⬜⬜
+🟩🟩🟩🟩🟩
+""";
+
+
+        var result = WordleProcessor.Validate(sample);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.InvalidAttempts));
+    }
+    
+    [Fact]
+    public void Validate_BadLineLengthTooMany()
+    {
+        var sample = """
+Wordle 734 4/6
+
+⬜🟨⬜⬜⬜
+⬜🟨⬜⬜⬜
+⬜🟩🟨⬜⬜
+⬜🟩🟨🟩⬜
+🟩🟩🟩🟩🟩
+""";
+
+
+        var result = WordleProcessor.Validate(sample);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.InvalidAttempts));
+    }
 }

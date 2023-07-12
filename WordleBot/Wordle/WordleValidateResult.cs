@@ -17,5 +17,6 @@ public enum WordleValidateResultType
 {
     Success,
     RegexMismatch,
-    InvalidLineLength
+    InvalidLineLength,
+    InvalidAttempts
 }
