@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace WordleBot.Wordle;
@@ -17,15 +18,14 @@ public class WordleProcessor
             return WordleValidateResult.RegexMismatch;
         }
 
-        var lines = input.Split('\n').GetEnumerator();
-        for (var i = 0; i < 2; i++)
+        var lines = input.Split('\n');
+        for (var i = 2; i < lines.Length; i++)
         {
-            lines.MoveNext();
-        }
-
-        while (lines.MoveNext())
-        {
-            
+            var utf32 = Encoding.UTF32.GetBytes(lines[i]);
+            if (utf32.Length != 20)
+            {
+                return WordleValidateResult.InvalidLineLength;
+            }
         }
 
         return WordleValidateResult.Success;
