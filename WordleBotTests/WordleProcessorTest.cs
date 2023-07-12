@@ -9,14 +9,13 @@ public class WordleProcessorTest
     [Fact]
     public void Validate_Optimistic()
     {
-        var input = """
-Wordle 734 4/6
+        var input =
+            "Wordle 734 4/6\n\n" +
 
-⬜🟨⬜⬜⬜
-⬜🟨⬜⬜⬜
-⬜🟩🟨🟩⬜
-🟩🟩🟩🟩🟩
-""";
+            "⬜🟨⬜⬜⬜\n" +
+            "⬜🟩🟨🟩⬜\n" +
+            "⬜🟨⬜⬜⬜\n" +
+            "🟩🟩🟩🟩🟩";
 
 
         var result = WordleProcessor.Validate(input);
@@ -26,11 +25,10 @@ Wordle 734 4/6
     [Fact]
     public void Validate_BadRegex()
     {
-        var input = """
-Wordle 734 4/6
+        var input =
+            "Wordle 734 4/6\n\n" +
 
-NotAGoodResult
-""";
+            "NotAGoodResult\n";
 
 
         var result = WordleProcessor.Validate(input);
@@ -40,14 +38,13 @@ NotAGoodResult
     [Fact]
     public void Validate_BadLineLength()
     {
-        var input = """
-Wordle 734 4/6
+        var input =
+            "Wordle 734 4/6\n\n" +
 
-⬜🟨⬜⬜⬜⬜
-⬜🟨⬜⬜⬜
-⬜🟩🟨🟩⬜
-🟩🟩🟩🟩🟩
-""";
+            "⬜🟨⬜⬜⬜⬜\n" +
+            "⬜🟨⬜⬜⬜\n" +
+            "⬜🟩🟨🟩⬜\n" +
+            "🟩🟩🟩🟩🟩";
 
 
         var result = WordleProcessor.Validate(input);
@@ -57,13 +54,12 @@ Wordle 734 4/6
     [Fact]
     public void Validate_BadAttemptsTooFew()
     {
-        var input = """
-Wordle 734 4/6
+        var input =
+"Wordle 734 4/6\n\n" +
 
-⬜🟨⬜⬜⬜
-⬜🟨⬜⬜⬜
-🟩🟩🟩🟩🟩
-""";
+        "⬜🟨⬜⬜⬜\n" + 
+        "⬜🟨⬜⬜⬜\n" +
+        "🟩🟩🟩🟩🟩";
 
 
         var result = WordleProcessor.Validate(input);
@@ -73,15 +69,14 @@ Wordle 734 4/6
     [Fact]
     public void Validate_BadLineLengthTooMany()
     {
-        var input = """
-Wordle 734 4/6
+        var input =
+            "Wordle 734 4/6\n\n" +
 
-⬜🟨⬜⬜⬜
-⬜🟨⬜⬜⬜
-⬜🟩🟨⬜⬜
-⬜🟩🟨🟩⬜
-🟩🟩🟩🟩🟩
-""";
+            "⬜🟨⬜⬜⬜\n" +
+            "⬜🟨⬜⬜⬜\n" +
+            "⬜🟩🟨⬜⬜\n" +
+            "⬜🟩🟨🟩⬜\n" +
+            "🟩🟩🟩🟩🟩";
 
 
         var result = WordleProcessor.Validate(input);
@@ -94,14 +89,13 @@ Wordle 734 4/6
     [Fact]
     public void Score_AttemptsLightMode()
     {
-        var input = """
-Wordle 753 4/6
+        var input =
+            "Wordle 753 4/6\n\n" +
 
-⬜⬜🟩⬜⬜
-⬜🟨🟩⬜⬜
-⬜🟩🟩🟨⬜
-🟩🟩🟩🟩🟩
-""";
+            "⬜⬜🟩⬜⬜\n" +
+            "⬜🟨🟩⬜⬜\n" +
+            "⬜🟩🟩🟨⬜\n" +
+            "🟩🟩🟩🟩🟩";
 
         WordleProcessor.Score(WordleValidateResult.Success(753, 4), input)
             .Should().Be(55);
@@ -110,39 +104,36 @@ Wordle 753 4/6
     [Fact]
     public void Score_AttemptsDarkMode()
     {
-        var input = """
-Wordle 753 5/6
+        var input =
+            "Wordle 753 5/6\n\n" +
 
-🟨⬛⬛⬛⬛
-⬛🟨⬛🟨⬛
-⬛🟨🟨⬛🟨
-🟩🟩🟩🟩⬛
-🟩🟩🟩🟩🟩
-""";
+            "🟨⬛⬛⬛⬛\n" +
+            "⬛🟨⬛🟨⬛\n" +
+            "⬛🟨🟨⬛🟨\n" +
+            "🟩🟩🟩🟩⬛\n" +
+            "🟩🟩🟩🟩🟩";
 
         WordleProcessor.Score(WordleValidateResult.Success(753, 5), input)
             .Should().Be(47);
 
-        input = """
-Wordle 753 5/6
+        input =
+            "Wordle 753 5/6\n\n" +
 
-⬛🟨⬛⬛⬛
-🟨⬛⬛⬛🟨
-⬛🟨⬛⬛🟨
-⬛🟩🟩🟩⬛
-🟩🟩🟩🟩🟩
-""";
+            "⬛🟨⬛⬛⬛\n" +
+            "🟨⬛⬛⬛🟨\n" +
+            "⬛🟨⬛⬛🟨\n" +
+            "⬛🟩🟩🟩⬛\n" +
+            "🟩🟩🟩🟩🟩";
 
         WordleProcessor.Score(WordleValidateResult.Success(753, 5), input)
             .Should().Be(39);
 
-        input = """
-Wordle 753 3/6
+        input =
+            "Wordle 753 3/6\n\n" +
 
-⬛🟨⬛⬛⬛
-⬛🟩⬛🟩⬛
-🟩🟩🟩🟩🟩
-""";
+            "⬛🟨⬛⬛⬛\n" +
+            "⬛🟩⬛🟩⬛\n" +
+            "🟩🟩🟩🟩🟩";
 
         WordleProcessor.Score(WordleValidateResult.Success(753, 3), input)
             .Should().Be(69);
@@ -152,27 +143,25 @@ Wordle 753 3/6
     [Fact]
     public void Score_AttemptsHighContrastMode()
     {
-        var input = """
-Wordle 684 5/6
+        var input =
+            "Wordle 684 5/6\n\n" +
 
-⬛⬛⬛⬛⬛
-⬛🟦⬛🟦⬛
-⬛🟧🟧⬛🟧
-⬛🟧🟧🟧🟧
-🟧🟧🟧🟧🟧
-""";
+            "⬛⬛⬛⬛⬛\n" +
+            "⬛🟦⬛🟦⬛\n" +
+            "⬛🟧🟧⬛🟧\n" +
+            "⬛🟧🟧🟧🟧\n" +
+            "🟧🟧🟧🟧🟧";
 
         WordleProcessor.Score(WordleValidateResult.Success(684, 5), input)
             .Should().Be(42);
-        input = """
-Wordle 684 5/6
+        input =
+            "Wordle 684 5/6\n\n" +
 
-⬛⬛⬛⬛⬛
-⬛🟨⬛🟨⬛
-⬛🟩🟩⬛🟩
-⬛🟩🟩🟩🟩
-🟩🟩🟩🟩🟩
-""";
+            "⬛⬛⬛⬛⬛\n" +
+            "⬛🟨⬛🟨⬛\n" +
+            "⬛🟩🟩⬛🟩\n" +
+            "⬛🟩🟩🟩🟩\n" +
+            "🟩🟩🟩🟩🟩";
 
         WordleProcessor.Score(WordleValidateResult.Success(684, 5), input)
             .Should().Be(42);
