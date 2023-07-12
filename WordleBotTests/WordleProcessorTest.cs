@@ -19,7 +19,7 @@ Wordle 734 4/6
 
 
         var result = WordleProcessor.Validate(sample);
-        result.Should().Be(WordleValidateResult.Success);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.Success, 734, 4));
     }
 
     [Fact]
@@ -33,7 +33,7 @@ NotAGoodResult
 
 
         var result = WordleProcessor.Validate(sample);
-        result.Should().Be(WordleValidateResult.RegexMismatch);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.RegexMismatch));
     }
 
     [Fact]
@@ -50,6 +50,6 @@ Wordle 734 4/6
 
 
         var result = WordleProcessor.Validate(sample);
-        result.Should().Be(WordleValidateResult.InvalidLineLength);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.InvalidLineLength));
     }
 }

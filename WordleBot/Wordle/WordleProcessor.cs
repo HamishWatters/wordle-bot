@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -15,7 +16,7 @@ public class WordleProcessor
         var match = WordleRegex.Match(input);
         if (!match.Success)
         {
-            return WordleValidateResult.RegexMismatch;
+            return WordleValidateResult.Failure(WordleValidateResultType.RegexMismatch);
         }
 
         var lines = input.Split('\n');
@@ -24,11 +25,25 @@ public class WordleProcessor
             var utf32 = Encoding.UTF32.GetBytes(lines[i]);
             if (utf32.Length != 20)
             {
-                return WordleValidateResult.InvalidLineLength;
+                return WordleValidateResult.Failure(WordleValidateResultType.InvalidLineLength);
             }
         }
 
-        return WordleValidateResult.Success;
+        var daysString = match.Groups[1].Value;
+        if (!int.TryParse(daysString, out var days))
+        {
+            // regex should have already refused this
+            throw new DataException($"Wordle day was not a number: {daysString}");
+        }
+
+        var attemptsString = match.Groups[2].Value;
+        if (!int.TryParse(attemptsString, out var attempts))
+        {
+            // regex should have already refused this
+            throw new DataException($"Wordle attempts was not a number: {attemptsString}");
+        }
+        
+        return WordleValidateResult.Success(days, attempts);
     }
         
 }
