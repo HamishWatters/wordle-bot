@@ -52,4 +52,98 @@ public static class WordleProcessor
         return WordleValidateResult.Success(days, attempts);
     }
     #endregion
+    
+    #region Scoring
+    public static int Score(WordleValidateResult result, string input)
+    {
+        if (result.Type != WordleValidateResultType.Success)
+        {
+            throw new Exception("Cannot get score for an invalid input");
+        }
+
+        var lines = input.Split('\n');
+        var attempts = result.Attempts!.Value;
+        var solution = new string[attempts];
+        Array.Copy(lines, 2, solution, 0, attempts);
+        return OriginalScoring(attempts, solution);
+    }
+
+    private static int OriginalScoring(int attempts, IReadOnlyList<string> solution)
+    {
+        var score = attempts switch
+        {
+            1 => 50,
+            2 => 40,
+            3 => 30,
+            4 => 20,
+            5 => 10,
+            _ => 0
+        };
+
+        var knownGreens = new bool[5];
+        var knownYellows = new bool[5];
+
+        for (var i = 0; i < solution.Count; i++)
+        {
+            var line = solution[i];
+            var utf32 = Encoding.UTF32.GetBytes(line);
+            var newGreens = 0;
+            var newYellows = 0;
+            for (var j = 0; j < 5; j++)
+            {
+                var square = ParseSquare(utf32, j * 4);
+                if (square == Square.Green && !knownGreens[j])
+                {
+                    newGreens++;
+                    knownGreens[j] = true;
+                }
+                else if (square == Square.Yellow && !knownYellows[j])
+                {
+                    newYellows++;
+                    knownYellows[j] = true;
+                }
+            }
+
+            score += newGreens * Math.Max(1, 10 - i * 2);
+            score += newYellows * (5 - i);
+        }
+
+        return score;
+    }
+
+    private enum Square
+    {
+        Grey,
+        Yellow,
+        Green
+    }
+
+    private static Square ParseSquare(byte[] utf32Bytes, int index)
+    {
+        if (utf32Bytes[index + 3] != 0x00)
+        {
+            // Regex should filter out unexpected characters
+            throw new DataException("All expected unicode characters have 4th byte 0");
+        }
+        if ((utf32Bytes[index] == 0x1c || utf32Bytes[index] == 0x1b) && utf32Bytes[index + 1] == 0x2b && utf32Bytes[index + 2] == 0x00)
+        {
+            // Black or white squares
+            return Square.Grey;
+        }
+
+        if (utf32Bytes[index + 1] == 0xf7 && utf32Bytes[index + 2] == 0x01)
+        {
+            // Green, yellow, orange and blue all have this 2nd and 3rd byte
+            switch (utf32Bytes[index])
+            {
+                case 0xe9: return Square.Green;
+                case 0xe7: return Square.Green;
+                case 0xe8: return Square.Yellow;
+                case 0xe6: return Square.Yellow;
+            }
+        }
+        
+        throw new Exception($"Don't understand UTF32 char: {utf32Bytes[index]} {utf32Bytes[index + 1]} {utf32Bytes[index + 2]} {utf32Bytes[index + 3]}");
+    }
+    #endregion
 }
