@@ -1,14 +1,10 @@
-﻿using Discord;
-using Discord.WebSocket;
-using WordleBot.Result;
-
-namespace WordleBot;
+﻿namespace WordleBot;
 
 public class Program
 {
-    public static Task Main(string[] args) => new Program().MainAsync(args);
+    public static Task Main(string[] args) => MainAsync(args);
 
-    private async Task MainAsync(IReadOnlyList<string> args)
+    private static async Task MainAsync(IReadOnlyList<string> args)
     {
         if (args.Count == 0)
             throw new Exception("Missing API token");
