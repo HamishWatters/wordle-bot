@@ -5,7 +5,9 @@ namespace WordleBot.Result;
 public class Day
 {
     private readonly int _dayNumber;
-    private readonly Dictionary<string, User> _results = new();
+    
+    public Dictionary<string, User> Results { get; } = new();
+    public bool Announced { get; set; }
 
     public Day(int dayNumber)
     {
@@ -14,12 +16,12 @@ public class Day
 
     public DayAddUserResult AddUserResult(string username, DateTimeOffset timestamp, WordleValidateResult result, int score)
     {
-        if (_results.ContainsKey(username))
+        if (Results.ContainsKey(username))
         {
             return DayAddUserResult.Known;
         }
 
-        _results[username] = new User(timestamp, result.Attempts!.Value, score);
+        Results[username] = new User(timestamp, result.Attempts!.Value, score);
         return DayAddUserResult.New;
     }
 }

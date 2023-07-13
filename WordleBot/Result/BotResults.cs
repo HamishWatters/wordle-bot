@@ -4,21 +4,30 @@ namespace WordleBot.Result;
 
 public class BotResults
 {
-    private readonly Dictionary<int, Day> _results = new();
+    public Dictionary<int, Day> Results { get; } = new();
     
-    public void ReceiveMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
+    public MessageResult ReceiveMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
     {
-        var result = WordleProcessor.Validate(messageContent);
-        if (result.Type != WordleValidateResultType.Success) return;
+        var validateResult = WordleProcessor.Validate(messageContent);
+        if (validateResult.Type != WordleValidateResultType.Success) return new MessageResult(MessageResultType.Continue);
 
-        var day = result.Day!.Value;
-        if (!_results.ContainsKey(day))
+        var day = validateResult.Day!.Value;
+        if (!Results.ContainsKey(day))
         {
-            _results[day] = new Day(day);
+            Results[day] = new Day(day);
         }
-        var score = WordleProcessor.Score(result, messageContent);
-        _results[day].AddUserResult(authorUsername, timestamp, result, score);
 
-        Console.WriteLine($"{authorUsername} scored {score} on day {result.Day}");
+        var dayResult = Results[day];
+        if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced);
+        
+        var score = WordleProcessor.Score(validateResult, messageContent);
+        var addResult = dayResult.AddUserResult(authorUsername, timestamp, validateResult, score);
+
+        return addResult switch
+        {
+            DayAddUserResult.New => new MessageResult(MessageResultType.NewSubmission, validateResult.Day),
+            DayAddUserResult.Known => new MessageResult(MessageResultType.AlreadySubmitted, validateResult.Day),
+            _ => throw new ArgumentOutOfRangeException($"Unknown addResult {addResult}")
+        };
     }
 }
