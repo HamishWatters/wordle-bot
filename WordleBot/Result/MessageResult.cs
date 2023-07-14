@@ -17,5 +17,6 @@ public enum MessageResultType
     Continue,
     NewSubmission,
     AlreadySubmitted,
-    AlreadyAnnounced
+    AlreadyAnnounced,
+    Announcement
 }

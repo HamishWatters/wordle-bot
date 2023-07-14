@@ -44,18 +44,24 @@ public class DiscordBot
                 throw new Exception("No guild found");
             }
 
-            var channel = guild.GetTextChannel(WordleChannelId);
-            if (guild == null)
-            {
-                throw new Exception("No channel found");
-            }
+            SocketTextChannel wordleChannel = guild.GetTextChannel(WordleChannelId);
+            SocketTextChannel winnerChannel = guild.GetTextChannel(WinnerChannelId);
 
-            await foreach(var page in channel.GetMessagesAsync(100))
-            {
-                foreach (var message in page)
+            SocketTextChannel [] channels = new[] {wordleChannel, winnerChannel};
+            
+            foreach(SocketTextChannel channel in channels){
+                if (channel == null)
                 {
-                    await HandleWordleMessageAsync(message, false);
-                    _results.ReceiveMessage(message.Author.Username, message.Timestamp, message.Content);
+                    throw new Exception("No channel found");
+                }
+
+                await foreach(var page in channel.GetMessagesAsync(100))
+                {
+                    foreach (var message in page)
+                    {
+                        await HandleWordleMessageAsync(message, false);
+                        _results.ReceiveMessage(message.Author.Username, message.Timestamp, message.Content);
+                    }
                 }
             }
 
@@ -103,6 +109,14 @@ public class DiscordBot
                 if (live)
                 {
                     await SendMessageAsync(WordleChannelId, $"{message.Author} is too late for Wordle {response.Day}");
+                }
+                
+                break;
+
+            case MessageResultType.Announcement:
+                if (live)
+                {
+                    //Do shit
                 }
 
                 break;
