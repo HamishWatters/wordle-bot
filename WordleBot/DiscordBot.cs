@@ -6,23 +6,33 @@ namespace WordleBot;
 
 public class DiscordBot
 {
-    private const ulong GuildId = 326451862582722561;
-    private const ulong WordleChannelId = 945629466800029736;
-    private const ulong WinnerChannelId = 992503715820994651;
-    private const bool TestMode = true;
-
-    private readonly string[] _requiredNames = { "hamish.w", "honeystain", "zefiren", "valiantstar" };
-
+    private readonly ulong _guildId;
+    private readonly ulong _wordleChannelId;
+    private readonly ulong _winnerChannelId;
+    
+    private readonly bool _testMode;
+    private readonly IList<string> _requiredNames;
+    private readonly IList<string> _adminNames;
+    private readonly MessageConfig _messageConfig;
+    
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results = new();
-
-    public DiscordBot()
+    
+    public DiscordBot(Config config)
     {
+        _guildId = config.GuildChannel;
+        _wordleChannelId = config.WordleChannel;
+        _winnerChannelId = config.WinnerChannel;
+        _testMode = config.TestMode;
+        _requiredNames = config.RequiredUsers;
+        _adminNames = config.Admins;
+        _messageConfig = config.MessageConfig;
+        
         var discordConfig = new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
         };
-
+        
         _discordClient = new DiscordSocketClient(discordConfig);
         _discordClient.Ready += ReadyHandler;
         _discordClient.MessageReceived += MessageReceivedHandler;
@@ -38,14 +48,14 @@ public class DiscordBot
     {
         try
         {
-            var guild = _discordClient.GetGuild(GuildId);
+            var guild = _discordClient.GetGuild(_guildId);
             if (guild == null)
             {
                 throw new Exception("No guild found");
             }
 
-            SocketTextChannel wordleChannel = guild.GetTextChannel(WordleChannelId);
-            SocketTextChannel winnerChannel = guild.GetTextChannel(WinnerChannelId);
+            SocketTextChannel wordleChannel = guild.GetTextChannel(_wordleChannelId);
+            SocketTextChannel winnerChannel = guild.GetTextChannel(_winnerChannelId);
 
             await ReadyHandlerChannel(wordleChannel);
             await ReadyHandlerChannel(winnerChannel);
@@ -81,7 +91,7 @@ public class DiscordBot
 
     private async Task HandleChannelAsync(IMessage message, bool live)
     {
-        var guild = _discordClient.GetGuild(GuildId);
+        var guild = _discordClient.GetGuild(_guildId);
 
         if (guild == null)
         {
@@ -95,13 +105,13 @@ public class DiscordBot
             throw new Exception("No channel found");
         }
 
-        if (channel == guild.GetTextChannel(WordleChannelId))
+        if (channel == guild.GetTextChannel(_wordleChannelId))
         {
-            await HandleMessageAsync(message, live, WordleChannelId);
+            await HandleMessageAsync(message, live, _wordleChannelId);
         }
-        else if (channel == guild.GetTextChannel(WinnerChannelId))
+        else if (channel == guild.GetTextChannel(_winnerChannelId))
         {
-            await HandleMessageAsync(message, live, WinnerChannelId);
+            await HandleMessageAsync(message, live, _winnerChannelId);
         }
     }
 
@@ -110,14 +120,13 @@ public class DiscordBot
 
         MessageResult response = new MessageResult(MessageResultType.Continue);
 
-        switch (channelId)
+        if (channelId == _wordleChannelId)
         {
-            case WordleChannelId:
-                response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
-                break;
-            case WinnerChannelId:
-                response = _results.ReceiveWinnerMessage(message.Author.Username, message.Timestamp, message.Content);
-                break;
+            response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
+        }
+        else if (channelId == _winnerChannelId)
+        {
+            response = _results.ReceiveWinnerMessage(message.Author.Username, message.Timestamp, message.Content);
         }
 
         switch (response.Type)
@@ -125,13 +134,13 @@ public class DiscordBot
             case MessageResultType.Continue:
                 // nothing happened
                 break;
-
+            
             case MessageResultType.NewSubmission:
                 // message had a new result, check for winner
                 var day = _results.Results[response.Day!.Value];
                 if (_requiredNames.All(name => day.Results.ContainsKey(name)))
                 {
-                    await SendMessageAsync(WinnerChannelId, $"Winner");
+                    await SendMessageAsync(_winnerChannelId, $"Winner");
                 }
 
                 break;
@@ -139,15 +148,16 @@ public class DiscordBot
             case MessageResultType.AlreadySubmitted:
                 if (live)
                 {
-                    await SendMessageAsync(WordleChannelId, $"{message.Author} has already submitted an answer for Wordle {response.Day}");
+                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmitted, message.Author, response.Day));
                 }
 
                 break;
-
+            
             case MessageResultType.AlreadyAnnounced:
                 if (live)
                 {
-                    await SendMessageAsync(WordleChannelId, $"{message.Author} is too late for Wordle {response.Day}");
+                    await SendMessageAsync(_wordleChannelId,
+                        string.Format(_messageConfig.SubmittedTooLate, message.Author, response.Day));
                 }
 
                 break;
@@ -159,21 +169,21 @@ public class DiscordBot
                 }
 
                 break;
-
+                
         }
-
+        
     }
 
     private async Task SendMessageAsync(ulong channelId, string message)
     {
-        if (TestMode)
+        if (_testMode)
         {
             Console.WriteLine("Not sending message properly as we are in test mode");
             Console.WriteLine($"Sending to {channelId}: \"{message}\"");
         }
         else
         {
-            var guild = _discordClient.GetGuild(GuildId);
+            var guild = _discordClient.GetGuild(_guildId);
             if (guild == null)
             {
                 throw new Exception("No guild found");
