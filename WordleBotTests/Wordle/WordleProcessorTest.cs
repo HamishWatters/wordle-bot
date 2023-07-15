@@ -23,6 +23,24 @@ public class WordleProcessorTest
     }
 
     [Fact]
+    public void Validate_Loss()
+    {
+        var input =
+            "Wordle 745 X/6\n\n" +
+
+            "⬛🟩🟩⬛🟩\n" +
+            "⬛🟩🟩⬛🟩\n" +
+            "⬛🟩🟩⬛🟩\n" +
+            "⬛🟩🟩⬛🟩\n" +
+            "🟨🟩🟩⬛🟩\n" +
+            "⬛🟩🟩🟩🟩";
+
+        var result = WordleProcessor.Validate(input);
+        result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.Success, 745, 10));
+        
+    }
+
+    [Fact]
     public void Validate_BadRegex()
     {
         var input =
@@ -177,6 +195,24 @@ public class WordleProcessorTest
 
         WordleProcessor.Score(WordleValidateResult.Success(684, 5), input)
             .Should().Be(42);
+    }
+
+    [Fact]
+    public void Score_UnexpectedUnicode_ThrowsException()
+    {
+        // real workflow should filter out this input because it doesn't match the regex
+        var input =
+            "Wordle 684 5/6\n\n" +
+
+            "⬛⬛⬛⬛⬛\n" +
+            "⬛🟨⬛🟨⬛\n" +
+            "⬛🟥🟥⬛🟥\n" +
+            "⬛🟥🟥🟥🟥\n" +
+            "🟥🟥🟥🟥🟥";
+
+        Action getScore = () => WordleProcessor.Score(WordleValidateResult.Success(684, 5), input);
+        getScore.Should().Throw<Exception>()
+            .WithMessage("Don't understand UTF32 char: 229 247 1 0");
     }
 
     #endregion

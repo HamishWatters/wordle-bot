@@ -32,7 +32,18 @@ public static class WordleProcessor
         }
 
         var attemptsString = match.Groups[2].Value;
-        if (!int.TryParse(attemptsString, out var attempts))
+        int attemptScore;
+        int attempts;
+        if (attemptsString == "X")
+        {
+            attemptScore = 10;
+            attempts = 6;
+        }
+        else if (int.TryParse(attemptsString, out attemptScore))
+        {
+            attempts = attemptScore;
+        }
+        else
         {
             // regex should have already refused this
             throw new DataException($"Wordle attempts was not a number: {attemptsString}");
@@ -53,7 +64,7 @@ public static class WordleProcessor
             }
         }
         
-        return WordleValidateResult.Success(days, attempts);
+        return WordleValidateResult.Success(days, attemptScore);
     }
 
     public static WordleAnnouncementResult IsAnnouncement(string input)
