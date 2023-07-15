@@ -9,6 +9,7 @@ public class DiscordBot
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
     private readonly ulong _winnerChannelId;
+    private readonly ulong _botId;
     
     private readonly bool _testMode;
     private readonly IList<string> _requiredNames;
@@ -23,6 +24,7 @@ public class DiscordBot
         _guildId = config.GuildChannel;
         _wordleChannelId = config.WordleChannel;
         _winnerChannelId = config.WinnerChannel;
+        _botId = config.Bot;
         _testMode = config.TestMode;
         _requiredNames = config.RequiredUsers;
         _adminNames = config.Admins;
@@ -54,11 +56,8 @@ public class DiscordBot
                 throw new Exception("No guild found");
             }
 
-            SocketTextChannel wordleChannel = guild.GetTextChannel(_wordleChannelId);
-            SocketTextChannel winnerChannel = guild.GetTextChannel(_winnerChannelId);
-
-            await ReadyHandlerChannel(wordleChannel);
-            await ReadyHandlerChannel(winnerChannel);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", HandleWordleChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", HandleWinnerChannelMessageAsync);
 
         }
         catch (Exception e)
@@ -68,67 +67,57 @@ public class DiscordBot
         }
     }
 
-    private async Task ReadyHandlerChannel(SocketTextChannel channel)
+    private static async Task ReadyHandlerChannel(SocketGuild guild, ulong channelId, string channelDescription, Func<IMessage, bool, Task> messageAction)
     {
+        var channel = guild.GetTextChannel(channelId);
         if (channel == null)
         {
-            throw new Exception("No channel found");
+            throw new Exception($"No {channelDescription} channel found");
         }
 
         await foreach (var page in channel.GetMessagesAsync(100))
         {
             foreach (var message in page)
             {
-                await HandleChannelAsync(message, false);
+                await messageAction.Invoke(message, false);
             }
         }
     }
 
     private async Task MessageReceivedHandler(SocketMessage message)
     {
-        await HandleChannelAsync(message, true);
-    }
-
-    private async Task HandleChannelAsync(IMessage message, bool live)
-    {
-        var guild = _discordClient.GetGuild(_guildId);
-
-        if (guild == null)
-        {
-            throw new Exception("No guild found");
-        }
-
-        var channel = message.Channel;
-
-        if (channel == null)
-        {
-            throw new Exception("No channel found");
-        }
-
-        if (channel == guild.GetTextChannel(_wordleChannelId))
-        {
-            await HandleMessageAsync(message, live, _wordleChannelId);
-        }
-        else if (channel == guild.GetTextChannel(_winnerChannelId))
-        {
-            await HandleMessageAsync(message, live, _winnerChannelId);
-        }
-    }
-
-    private async Task HandleMessageAsync(IMessage message, bool live, ulong channelId)
-    {
-
-        MessageResult response = new MessageResult(MessageResultType.Continue);
+        var channelId = message.Channel.Id;
 
         if (channelId == _wordleChannelId)
         {
-            response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
+            await HandleWordleChannelMessageAsync(message, true);
         }
         else if (channelId == _winnerChannelId)
         {
-            response = _results.ReceiveWinnerMessage(message.Author.Username, message.Timestamp, message.Content);
+            await HandleWinnerChannelMessageAsync(message, true);
+        }
+    }
+
+    private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
+    {
+        var response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
+        await HandleMessageResultAsync(response, message.Author.Username, live);
+    }
+    
+    private async Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
+    {
+        if (message.Author.Id != _botId)
+        {
+            // Only process announcements that the bot sent
+            return;
         }
 
+        var response = _results.ReceiveWinnerMessage(message.Content);
+        await HandleMessageResultAsync(response, message.Author.Username, live);
+    }
+
+    private async Task HandleMessageResultAsync(MessageResult response, string author, bool live)
+    {
         switch (response.Type)
         {
             case MessageResultType.Continue:
@@ -148,7 +137,7 @@ public class DiscordBot
             case MessageResultType.AlreadySubmitted:
                 if (live)
                 {
-                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmitted, message.Author, response.Day));
+                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmitted, author, response.Day));
                 }
 
                 break;
@@ -157,7 +146,7 @@ public class DiscordBot
                 if (live)
                 {
                     await SendMessageAsync(_wordleChannelId,
-                        string.Format(_messageConfig.SubmittedTooLate, message.Author, response.Day));
+                        string.Format(_messageConfig.SubmittedTooLate, author, response.Day));
                 }
 
                 break;

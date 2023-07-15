@@ -39,16 +39,16 @@ public class BotResults
 
     }
 
-    public MessageResult ReceiveWinnerMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
+    public MessageResult ReceiveWinnerMessage(string messageContent)
     {
         var announcementResult = WordleProcessor.IsAnnouncement(messageContent);
 
         if (announcementResult.Type == WordleAnnouncementResultType.Success)
         {
             var day = announcementResult.Day!.Value;
-            if (Results.ContainsKey(day))
+            if (Results.TryGetValue(day, out var result))
             {
-                Results[day].Announced = true;
+                result.Announced = true;
             }
         }
         return new MessageResult(MessageResultType.Continue);
