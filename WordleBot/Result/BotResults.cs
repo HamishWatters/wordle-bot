@@ -26,7 +26,7 @@ public class BotResults
             }
 
             var dayResult = Results[day];
-            if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced);
+            if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced, day);
 
             var score = WordleProcessor.Score(validateResult, messageContent);
             var addResult = dayResult.AddUserResult(authorUsername, timestamp, validateResult, score, _winCondition);
@@ -54,10 +54,12 @@ public class BotResults
         if (announcementResult.Type == WordleAnnouncementResultType.Success)
         {
             var day = announcementResult.Day!.Value;
-            if (Results.TryGetValue(day, out var result))
+            if (!Results.ContainsKey(day))
             {
-                result.Announced = true;
+                Results[day] = new Day(day);
             }
+
+            Results[day].Announced = true;
         }
         return new MessageResult(MessageResultType.Continue);
 

@@ -29,20 +29,7 @@ public class Day
 
     public string GetWinMessage(string winnerFormat, string answerFormat, string runnersUpFormat, string? answer = null)
     {
-        var results = Results.ToList();
-        results.Sort((a, b) =>
-        {
-            var left = a.Value;
-            var right = b.Value;
-            var comparison = left.Attempts.CompareTo(right.Attempts); // compare left to right here as a smaller attempts is better
-            if (comparison != 0) return comparison;
-
-            comparison = right.Score.CompareTo(left.Score);
-            if (comparison != 0) return comparison;
-
-            return right.Timestamp.CompareTo(left.Timestamp);
-        });
-        
+        var results = GetSortedList();
         var builder = new StringBuilder();
         var winner = results[0];
         builder.Append(string.Format(winnerFormat, _dayNumber, winner.Key, winner.Value.Attempts, winner.Value.Score));
@@ -59,6 +46,40 @@ public class Day
         }
 
         return builder.ToString();
+    }
+
+    public string GetListForMsg(string runnersUpFormat)
+    {
+        var results = GetSortedList();
+        var builder = new StringBuilder();
+        for (var i = 0; i < results.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append('\n');
+            }
+            builder.Append(string.Format(runnersUpFormat, i + 1, results[i].Key, results[i].Value.Score));
+        }
+
+        return builder.ToString();
+    }
+
+    private List<KeyValuePair<string, User>> GetSortedList()
+    {
+        var results = Results.ToList();
+        results.Sort((a, b) =>
+        {
+            var left = a.Value;
+            var right = b.Value;
+            var comparison = left.Attempts.CompareTo(right.Attempts); // compare left to right here as a smaller attempts is better
+            if (comparison != 0) return comparison;
+
+            comparison = right.Score.CompareTo(left.Score);
+            if (comparison != 0) return comparison;
+
+            return right.Timestamp.CompareTo(left.Timestamp);
+        });
+        return results;
     }
 }
 

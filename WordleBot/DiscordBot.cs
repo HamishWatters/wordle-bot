@@ -1,6 +1,7 @@
 using Discord;
 using Discord.WebSocket;
 using WordleBot.Answer;
+using WordleBot.Commands;
 using WordleBot.Result;
 
 namespace WordleBot;
@@ -19,6 +20,7 @@ public class DiscordBot
     
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results;
+    private readonly CommandParser _commandParser;
 
     private readonly AnswerProvider _answerProvider = new();
     
@@ -31,7 +33,7 @@ public class DiscordBot
         _testMode = config.TestMode;
         _requiredNames = config.RequiredUsers;
         _adminNames = config.Admins;
-        _messageConfig = config.MessageConfig;
+        _messageConfig = config.Message;
         
         var discordConfig = new DiscordSocketConfig
         {
@@ -43,6 +45,8 @@ public class DiscordBot
         _discordClient.MessageReceived += MessageReceivedHandler;
 
         _results = new BotResults(day => _requiredNames.All(name => day.Results.ContainsKey(name)));
+
+        _commandParser = new CommandParser(config.Command);
     }
 
     public async Task Launch(string token)
@@ -61,9 +65,10 @@ public class DiscordBot
                 throw new Exception("No guild found");
             }
 
-            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", HandleWordleChannelMessageAsync);
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", HandleWinnerChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", HandleWordleChannelMessageAsync);
 
+            Console.WriteLine("Startup finished");
         }
         catch (Exception e)
         {
@@ -105,8 +110,73 @@ public class DiscordBot
 
     private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
-        var response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
-        await HandleMessageResultAsync(response, message.Author.Username, live);
+        
+        var maybeCommand = _commandParser.Parse(message.Content);
+        if (maybeCommand != null)
+        {
+            if (live)
+            {
+                await ProcessCommand(message.Author.Username, maybeCommand);
+            }
+        }
+        else
+        {
+            var response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
+            await HandleMessageResultAsync(response, message.Author.Username, live);
+        }
+    }
+
+    private async Task ProcessCommand(string username, Command command)
+    {
+        switch (command.Type)
+        {
+            case CommandType.List:
+                await ProcessList(command.Day!.Value);
+                break;
+            
+            case CommandType.End:
+                await ProcessEnd(username, command.Day!.Value);
+                break;
+            
+            case CommandType.Unknown:
+            default:
+                Console.WriteLine("Unknown command");
+                await SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
+                break;
+        }
+    }
+
+    private async Task ProcessList(int day)
+    {
+        if (_results.Results.TryGetValue(day, out var dayResult))
+        {
+            await SendMessageAsync(_wordleChannelId, dayResult.GetListForMsg(_messageConfig.RunnersUpFormat));
+        }
+        else
+        {
+            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandUnknownDay, day));
+        }
+    }
+
+    private async Task ProcessEnd(string username, int day)
+    {
+        if (_adminNames.Contains(username))
+        {
+            if (_results.Results.TryGetValue(day, out var dayResult))
+            {
+                var answer = await _answerProvider.GetAsync(day);
+                await SendMessageAsync(_winnerChannelId,
+                    dayResult.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+            }
+            else
+            {
+                await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandUnknownDay, day));
+            }
+        }
+        else
+        {
+            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandNotAdmin));
+        }
     }
     
     private async Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
@@ -132,9 +202,17 @@ public class DiscordBot
             case MessageResultType.Winner:
                 // message had a new result, check for winner
                 var day = _results.Results[response.Day!.Value];
-                var answer = await _answerProvider.GetAsync(response.Day!.Value);
-                await SendMessageAsync(_winnerChannelId,
-                    day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+                if (!day.Announced)
+                {
+                    day.Announced = true;
+                    var answer = await _answerProvider.GetAsync(response.Day!.Value);
+                    await SendMessageAsync(_winnerChannelId,
+                        day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+                }
+                else
+                {
+                    Console.WriteLine("Not sending because it's announced");
+                }
                 break;
 
             case MessageResultType.AlreadySubmitted:

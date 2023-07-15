@@ -15,5 +15,6 @@ public class Config
     public ulong WordleChannel { get; set; } = DefaultWordleChannel;
     public ulong WinnerChannel { get; set; } = DefaultWinnerChannel;
     public ulong Bot { get; set; } = DefaultBot;
-    public MessageConfig MessageConfig { get; set; }
+    public MessageConfig Message { get; set; } = new();
+    public CommandConfig Command { get; set; } = new();
 }

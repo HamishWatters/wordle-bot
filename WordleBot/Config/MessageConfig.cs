@@ -7,4 +7,8 @@ public class MessageConfig
     public string WinnerFormat { get; set; } = "Wordle {0} winner is {1}! Who scored {2}/6 ({3}).";
     public string TodaysAnswerFormat { get; set; } = "Today's answer was {0}";
     public string RunnersUpFormat { get; set; } = "{0} - {1}: {2} points";
+    
+    public string CommandUnknownDay { get; set; } = "Day {0} has not been seen yet";
+    public string CommandNotAdmin { get; set; } = "User is not allowed to do that";
+    public string CommandUnknown { get; set; } = "Unknown command";
 }
