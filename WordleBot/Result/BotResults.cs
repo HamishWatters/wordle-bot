@@ -6,6 +6,13 @@ public class BotResults
 {
     public Dictionary<int, Day> Results { get; } = new();
 
+    private readonly Func<Day, bool> _winCondition;
+
+    public BotResults(Func<Day, bool> winCondition)
+    {
+        _winCondition = winCondition;
+    }
+
     public MessageResult ReceiveWordleMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
     {
         var validateResult = WordleProcessor.Validate(messageContent);
@@ -22,11 +29,12 @@ public class BotResults
             if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced);
 
             var score = WordleProcessor.Score(validateResult, messageContent);
-            var addResult = dayResult.AddUserResult(authorUsername, timestamp, validateResult, score);
+            var addResult = dayResult.AddUserResult(authorUsername, timestamp, validateResult, score, _winCondition);
 
             return addResult switch
             {
-                DayAddUserResult.New => new MessageResult(MessageResultType.NewSubmission, validateResult.Day),
+                DayAddUserResult.New => new MessageResult(MessageResultType.Continue, validateResult.Day),
+                DayAddUserResult.Win => new MessageResult(MessageResultType.Winner, validateResult.Day),
                 DayAddUserResult.Known => new MessageResult(MessageResultType.AlreadySubmitted, validateResult.Day),
                 _ => throw new ArgumentOutOfRangeException($"Unknown addResult {addResult}")
             };

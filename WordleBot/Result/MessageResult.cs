@@ -15,7 +15,7 @@ public struct MessageResult
 public enum MessageResultType
 {
     Continue,
-    NewSubmission,
+    Winner,
     AlreadySubmitted,
     AlreadyAnnounced,
     Announcement

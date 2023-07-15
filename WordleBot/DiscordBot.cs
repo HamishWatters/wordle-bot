@@ -17,7 +17,7 @@ public class DiscordBot
     private readonly MessageConfig _messageConfig;
     
     private readonly DiscordSocketClient _discordClient;
-    private readonly BotResults _results = new();
+    private readonly BotResults _results;
     
     public DiscordBot(Config config)
     {
@@ -38,6 +38,8 @@ public class DiscordBot
         _discordClient = new DiscordSocketClient(discordConfig);
         _discordClient.Ready += ReadyHandler;
         _discordClient.MessageReceived += MessageReceivedHandler;
+
+        _results = new BotResults(day => _requiredNames.All(name => day.Results.ContainsKey(name)));
     }
 
     public async Task Launch(string token)
@@ -124,20 +126,17 @@ public class DiscordBot
                 // nothing happened
                 break;
             
-            case MessageResultType.NewSubmission:
+            case MessageResultType.Winner:
                 // message had a new result, check for winner
                 var day = _results.Results[response.Day!.Value];
-                if (_requiredNames.All(name => day.Results.ContainsKey(name)))
-                {
-                    await SendMessageAsync(_winnerChannelId, $"Winner");
-                }
-
+                await SendMessageAsync(_winnerChannelId,
+                    day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.RunnersUpFormat));
                 break;
 
             case MessageResultType.AlreadySubmitted:
                 if (live)
                 {
-                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmitted, author, response.Day));
+                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmittedFormat, author, response.Day));
                 }
 
                 break;
@@ -146,7 +145,7 @@ public class DiscordBot
                 if (live)
                 {
                     await SendMessageAsync(_wordleChannelId,
-                        string.Format(_messageConfig.SubmittedTooLate, author, response.Day));
+                        string.Format(_messageConfig.SubmittedTooLateFormat, author, response.Day));
                 }
 
                 break;
