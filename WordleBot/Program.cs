@@ -9,7 +9,7 @@ public class Program
     private static async Task MainAsync(IReadOnlyList<string> args)
     {
         if (args.Count == 0)
-            throw new Exception("Missing API token");
+            throw new Exception("Missing path to config file");
 
         Config config;
         await using (var file = new FileStream(args[0], FileMode.Open))
