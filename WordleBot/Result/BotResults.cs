@@ -41,11 +41,11 @@ public class BotResults
 
     public MessageResult ReceiveWinnerMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
     {
-        var annoucementResult = WordleProcessor.IsAnnouncement(messageContent);
+        var announcementResult = WordleProcessor.IsAnnouncement(messageContent);
 
-        if (annoucementResult.Type == WordleAnnouncementResultType.Success)
+        if (announcementResult.Type == WordleAnnouncementResultType.Success)
         {
-            var day = annoucementResult.Day!.Value;
+            var day = announcementResult.Day!.Value;
             if (Results.ContainsKey(day))
             {
                 Results[day].Announced = true;

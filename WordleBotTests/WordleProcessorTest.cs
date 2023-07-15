@@ -82,6 +82,18 @@ public class WordleProcessorTest
         var result = WordleProcessor.Validate(input);
         result.Should().BeEquivalentTo(new WordleValidateResult(WordleValidateResultType.InvalidAttempts));
     }
+
+    [Fact]
+    public void IsAnnouncement_Optimistic()
+    {
+        var input = "Wordle 681 winner is Jonathan! Who scored 2/6 (97).\n" +
+                    "Today's answer was RANGE\n" +
+                    "2 - Zefiren: 84 points\n" +
+                    "3 - Hamish: 73 points\n" +
+                    "4 - Valiant: 45 points";
+        var result = WordleProcessor.IsAnnouncement(input);
+        result.Should().BeEquivalentTo(WordleAnnouncementResult.Success(681, "Jonathan"));
+    }
     #endregion
     
     #region Scoring
