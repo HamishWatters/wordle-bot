@@ -27,7 +27,7 @@ public class Day
         return winCondition.Invoke(this) ? DayAddUserResult.Win : DayAddUserResult.New;
     }
 
-    public string GetWinMessage(string winnerFormat, string runnersUpFormat)
+    public string GetWinMessage(string winnerFormat, string answerFormat, string runnersUpFormat, string? answer = null)
     {
         var results = Results.ToList();
         results.Sort((a, b) =>
@@ -46,6 +46,11 @@ public class Day
         var builder = new StringBuilder();
         var winner = results[0];
         builder.Append(string.Format(winnerFormat, _dayNumber, winner.Key, winner.Value.Attempts, winner.Value.Score));
+        if (answer != null)
+        {
+            builder.Append('\n');
+            builder.Append(string.Format(answerFormat, answer));
+        }
 
         for (var i = 1; i < results.Count; i++)
         {

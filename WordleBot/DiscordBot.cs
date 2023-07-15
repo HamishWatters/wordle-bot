@@ -1,5 +1,6 @@
 using Discord;
 using Discord.WebSocket;
+using WordleBot.Answer;
 using WordleBot.Result;
 
 namespace WordleBot;
@@ -18,6 +19,8 @@ public class DiscordBot
     
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results;
+
+    private readonly AnswerProvider _answerProvider = new();
     
     public DiscordBot(Config config)
     {
@@ -129,8 +132,9 @@ public class DiscordBot
             case MessageResultType.Winner:
                 // message had a new result, check for winner
                 var day = _results.Results[response.Day!.Value];
+                var answer = await _answerProvider.GetAsync(response.Day!.Value);
                 await SendMessageAsync(_winnerChannelId,
-                    day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.RunnersUpFormat));
+                    day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
                 break;
 
             case MessageResultType.AlreadySubmitted:

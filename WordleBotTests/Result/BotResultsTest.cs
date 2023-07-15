@@ -8,10 +8,15 @@ namespace WordleBotTests.Result;
 public class BotResultsTest
 {
     private const string IsoFormat = "yyyy-MM-ddThh:mm:ssZ";
-    
-    private readonly BotResults _botResults = new(_ => false);
+
+    private readonly BotResults _botResults;
     private readonly DateTimeOffset _baseDate = DateTimeOffset.Now;
 
+    public BotResultsTest()
+    {
+        _botResults = new BotResults(_ => false);
+    }
+    
     [Fact]
     public void ReceiveMessage_ValidFirst_Optimistic()
     {
@@ -93,7 +98,7 @@ public class BotResultsTest
         botResults.Results.ContainsKey(755).Should().BeTrue();
 
         var messageConfig = new MessageConfig();
-        botResults.Results[755].GetWinMessage(messageConfig.WinnerFormat, messageConfig.RunnersUpFormat)
+        botResults.Results[755].GetWinMessage(messageConfig.WinnerFormat, messageConfig.TodaysAnswerFormat, messageConfig.RunnersUpFormat)
             .Should().Be(
                 "Wordle 755 winner is honeystain! Who scored 3/6 (71).\n" +
                 "2 - zefiren: 67 points\n" +
