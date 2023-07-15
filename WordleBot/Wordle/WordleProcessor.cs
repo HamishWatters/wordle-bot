@@ -10,6 +10,10 @@ public static class WordleProcessor
     private static readonly Regex WordleRegex = new(
         "^Wordle\\s(\\d+)\\s([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
         );
+
+    private static readonly Regex WinnerRegex = new(
+        "^Wordle (\\d+) winner is (.+)! Who scored ([1-6X])/6 \\((\\d{1,2}|100)\\)\\.$"
+        );
     
     #region Validation
     public static WordleValidateResult Validate(string input)
@@ -51,6 +55,27 @@ public static class WordleProcessor
         
         return WordleValidateResult.Success(days, attempts);
     }
+
+    public static WordleAnnouncementResult IsAnnouncement(string input)
+    {
+        var match = WinnerRegex.Match(input);
+        if (!match.Success)
+        {
+            return WordleAnnouncementResult.Failure(WordleAnnouncementResultType.RegexMismatch);
+        }
+
+        var daysString = match.Groups[1].Value;
+        if (!int.TryParse(daysString, out var days))
+        {
+            // regex should have already refused this
+            throw new DataException($"Wordle day was not a number: {daysString}");
+        }
+
+        var usernameString = match.Groups[2].Value;
+        
+        return WordleAnnouncementResult.Success(days, usernameString);
+    }
+
     #endregion
     
     #region Scoring
