@@ -6,10 +6,9 @@ public class BotResults
 {
     public Dictionary<int, Day> Results { get; } = new();
 
-    public MessageResult ReceiveMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
+    public MessageResult ReceiveWordleMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
     {
         var validateResult = WordleProcessor.Validate(messageContent);
-        var annoucementResult = WordleProcessor.IsAnnouncement(messageContent);
 
         if (validateResult.Type == WordleValidateResultType.Success)
         {
@@ -32,20 +31,27 @@ public class BotResults
                 _ => throw new ArgumentOutOfRangeException($"Unknown addResult {addResult}")
             };
         }
-        else if (annoucementResult.Type == WordleAnnouncementResultType.Success) 
+        else
+        {
+            return new MessageResult(MessageResultType.Continue);
+        }
+
+
+    }
+
+    public MessageResult ReceiveWinnerMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
+    {
+        var annoucementResult = WordleProcessor.IsAnnouncement(messageContent);
+
+        if (annoucementResult.Type == WordleAnnouncementResultType.Success)
         {
             var day = annoucementResult.Day!.Value;
             if (Results.ContainsKey(day))
             {
                 Results[day].Announced = true;
             }
-            return new MessageResult(MessageResultType.Continue);
         }
-        else
-        {
-            return new MessageResult(MessageResultType.Continue);
-        }
-
+        return new MessageResult(MessageResultType.Continue);
 
     }
 }

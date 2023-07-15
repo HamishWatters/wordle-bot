@@ -12,7 +12,7 @@ public static class WordleProcessor
         );
 
     private static readonly Regex WinnerRegex = new(
-        "^Wordle (\\d+) winner is (\\w+)! Who scored ([1-6X])/6 \\((\\d{1,2}|100)\\)\\.$"
+        "^Wordle (\\d+) winner is (.+)! Who scored ([1-6X])/6 \\((\\d{1,2}|100)\\)\\.$"
         );
     
     #region Validation

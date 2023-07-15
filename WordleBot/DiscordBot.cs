@@ -11,18 +11,18 @@ public class DiscordBot
     private const ulong WinnerChannelId = 992503715820994651;
     private const bool TestMode = true;
 
-    private readonly string[] _requiredNames = {"hamish.w", "honeystain", "zefiren", "valiantstar"};
-    
+    private readonly string[] _requiredNames = { "hamish.w", "honeystain", "zefiren", "valiantstar" };
+
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results = new();
-    
+
     public DiscordBot()
     {
         var discordConfig = new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
         };
-        
+
         _discordClient = new DiscordSocketClient(discordConfig);
         _discordClient.Ready += ReadyHandler;
         _discordClient.MessageReceived += MessageReceivedHandler;
@@ -47,23 +47,8 @@ public class DiscordBot
             SocketTextChannel wordleChannel = guild.GetTextChannel(WordleChannelId);
             SocketTextChannel winnerChannel = guild.GetTextChannel(WinnerChannelId);
 
-            SocketTextChannel [] channels = new[] {wordleChannel, winnerChannel};
-            
-            foreach(SocketTextChannel channel in channels){
-                if (channel == null)
-                {
-                    throw new Exception("No channel found");
-                }
-
-                await foreach(var page in channel.GetMessagesAsync(100))
-                {
-                    foreach (var message in page)
-                    {
-                        await HandleWordleMessageAsync(message, false);
-                        _results.ReceiveMessage(message.Author.Username, message.Timestamp, message.Content);
-                    }
-                }
-            }
+            await ReadyHandlerChannel(wordleChannel);
+            await ReadyHandlerChannel(winnerChannel);
 
         }
         catch (Exception e)
@@ -73,20 +58,74 @@ public class DiscordBot
         }
     }
 
-    private async Task MessageReceivedHandler(SocketMessage message)
+    private async Task ReadyHandlerChannel(SocketTextChannel channel)
     {
-        await HandleWordleMessageAsync(message, true);
+        if (channel == null)
+        {
+            throw new Exception("No channel found");
+        }
+
+        await foreach (var page in channel.GetMessagesAsync(100))
+        {
+            foreach (var message in page)
+            {
+                await HandleChannelAsync(message, false);
+            }
+        }
     }
 
-    private async Task HandleWordleMessageAsync(IMessage message, bool live)
+    private async Task MessageReceivedHandler(SocketMessage message)
     {
-        var response = _results.ReceiveMessage(message.Author.Username, message.Timestamp, message.Content);
+        await HandleChannelAsync(message, true);
+    }
+
+    private async Task HandleChannelAsync(IMessage message, bool live)
+    {
+        var guild = _discordClient.GetGuild(GuildId);
+
+        if (guild == null)
+        {
+            throw new Exception("No guild found");
+        }
+
+        var channel = message.Channel;
+
+        if (channel == null)
+        {
+            throw new Exception("No channel found");
+        }
+
+        if (channel == guild.GetTextChannel(WordleChannelId))
+        {
+            await HandleMessageAsync(message, live, WordleChannelId);
+        }
+        else if (channel == guild.GetTextChannel(WinnerChannelId))
+        {
+            await HandleMessageAsync(message, live, WinnerChannelId);
+        }
+    }
+
+    private async Task HandleMessageAsync(IMessage message, bool live, ulong channelId)
+    {
+
+        MessageResult response = new MessageResult(MessageResultType.Continue);
+
+        switch (channelId)
+        {
+            case WordleChannelId:
+                response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
+                break;
+            case WinnerChannelId:
+                response = _results.ReceiveWinnerMessage(message.Author.Username, message.Timestamp, message.Content);
+                break;
+        }
+
         switch (response.Type)
         {
             case MessageResultType.Continue:
                 // nothing happened
                 break;
-            
+
             case MessageResultType.NewSubmission:
                 // message had a new result, check for winner
                 var day = _results.Results[response.Day!.Value];
@@ -104,13 +143,13 @@ public class DiscordBot
                 }
 
                 break;
-            
+
             case MessageResultType.AlreadyAnnounced:
                 if (live)
                 {
                     await SendMessageAsync(WordleChannelId, $"{message.Author} is too late for Wordle {response.Day}");
                 }
-                
+
                 break;
 
             case MessageResultType.Announcement:
@@ -120,9 +159,9 @@ public class DiscordBot
                 }
 
                 break;
-                
+
         }
-        
+
     }
 
     private async Task SendMessageAsync(ulong channelId, string message)
