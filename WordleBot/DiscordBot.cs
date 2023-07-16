@@ -14,7 +14,6 @@ public class DiscordBot
     private readonly ulong _botId;
     
     private readonly bool _testMode;
-    private readonly IList<string> _requiredNames;
     private readonly IList<string> _adminNames;
     private readonly MessageConfig _messageConfig;
     
@@ -31,7 +30,6 @@ public class DiscordBot
         _winnerChannelId = config.WinnerChannel;
         _botId = config.Bot;
         _testMode = config.TestMode;
-        _requiredNames = config.RequiredUsers;
         _adminNames = config.Admins;
         _messageConfig = config.Message;
         
@@ -44,7 +42,8 @@ public class DiscordBot
         _discordClient.Ready += ReadyHandler;
         _discordClient.MessageReceived += MessageReceivedHandler;
 
-        _results = new BotResults(day => _requiredNames.All(name => day.Results.ContainsKey(name)));
+        var requiredNames = config.RequiredUsers;
+        _results = new BotResults(day => requiredNames.All(name => day.Results.ContainsKey(name)));
 
         _commandParser = new CommandParser(config.Command);
     }
@@ -85,7 +84,7 @@ public class DiscordBot
             throw new Exception($"No {channelDescription} channel found");
         }
 
-        await foreach (var page in channel.GetMessagesAsync(100))
+        await foreach (var page in channel.GetMessagesAsync())
         {
             foreach (var message in page)
             {

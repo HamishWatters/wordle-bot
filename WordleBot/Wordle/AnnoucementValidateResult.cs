@@ -1,10 +1,10 @@
 namespace WordleBot.Wordle;
 
-public record WordleAnnouncementResult(WordleAnnouncementResultType Type, int? Day = null, string? username = null)
+public record WordleAnnouncementResult(WordleAnnouncementResultType Type, int? Day = null)
 {
-    public static WordleAnnouncementResult Success(int day, string username)
+    public static WordleAnnouncementResult Success(int day)
     {
-        return new WordleAnnouncementResult(WordleAnnouncementResultType.Success, day, username);
+        return new WordleAnnouncementResult(WordleAnnouncementResultType.Success, day);
     }
 
     public static WordleAnnouncementResult Failure(WordleAnnouncementResultType reason)

@@ -1,7 +1,7 @@
 using FluentAssertions;
 using WordleBot.Wordle;
 
-namespace WordleBotTests;
+namespace WordleBotTests.Wordle;
 
 public class WordleProcessorTest
 {
@@ -110,7 +110,7 @@ public class WordleProcessorTest
                     "3 - Hamish: 73 points\n" +
                     "4 - Valiant: 45 points";
         var result = WordleProcessor.IsAnnouncement(input);
-        result.Should().BeEquivalentTo(WordleAnnouncementResult.Success(681, "Jonathan"));
+        result.Should().BeEquivalentTo(WordleAnnouncementResult.Success(681));
     }
     #endregion
     

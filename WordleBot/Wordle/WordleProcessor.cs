@@ -82,9 +82,7 @@ public static class WordleProcessor
             throw new DataException($"Wordle day was not a number: {daysString}");
         }
 
-        var usernameString = match.Groups[2].Value;
-        
-        return WordleAnnouncementResult.Success(days, usernameString);
+        return WordleAnnouncementResult.Success(days);
     }
 
     #endregion
