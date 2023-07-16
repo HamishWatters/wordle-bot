@@ -230,15 +230,6 @@ public class DiscordBot
                 }
 
                 break;
-
-            case MessageResultType.Announcement:
-                if (live)
-                {
-                    //Do shit
-                }
-
-                break;
-                
         }
         
     }

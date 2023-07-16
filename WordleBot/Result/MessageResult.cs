@@ -17,6 +17,5 @@ public enum MessageResultType
     Continue,
     Winner,
     AlreadySubmitted,
-    AlreadyAnnounced,
-    Announcement
+    AlreadyAnnounced
 }
