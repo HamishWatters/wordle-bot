@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using WordleBot.Answer;
 using WordleBot.Commands;
 using WordleBot.Result;
+using WordleBot.Wordle;
 
 namespace WordleBot;
 
@@ -46,6 +47,8 @@ public class DiscordBot
         _results = new BotResults(day => requiredNames.All(name => day.Results.ContainsKey(name)));
 
         _commandParser = new CommandParser(config.Command);
+        
+        ScheduleDailyPollBackground();
     }
 
     public async Task Launch(string token)
@@ -200,18 +203,7 @@ public class DiscordBot
             
             case MessageResultType.Winner:
                 // message had a new result, check for winner
-                var day = _results.Results[response.Day!.Value];
-                if (!day.Announced)
-                {
-                    day.Announced = true;
-                    var answer = await _answerProvider.GetAsync(response.Day!.Value);
-                    await SendMessageAsync(_winnerChannelId,
-                        day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
-                }
-                else
-                {
-                    Console.WriteLine("Not sending because it's announced");
-                }
+                await TryAnnounceDayAsync(response.Day!.Value);
                 break;
 
             case MessageResultType.AlreadySubmitted:
@@ -231,7 +223,22 @@ public class DiscordBot
 
                 break;
         }
-        
+    }
+
+    private async Task TryAnnounceDayAsync(int dayNumber)
+    {
+        var day = _results.Results[dayNumber];
+        if (!day.Announced)
+        {
+            day.Announced = true;
+            var answer = await _answerProvider.GetAsync(dayNumber);
+            await SendMessageAsync(_winnerChannelId,
+                day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+        }
+        else
+        {
+            Console.WriteLine("Not sending because it's announced");
+        }
     }
 
     private async Task SendMessageAsync(ulong channelId, string message)
@@ -256,6 +263,44 @@ public class DiscordBot
             }
 
             await channel.SendMessageAsync(message);
+        }
+    }
+
+    private void ScheduleDailyPollBackground()
+    {
+        ScheduleDailyPoll();
+    }
+
+    private async void ScheduleDailyPoll()
+    {
+        var now = DateTime.Now;
+        var firstPoll = DateOnly.FromDateTime(now);
+        if (TimeOnly.FromDateTime(now) > TimeOnly.Parse("23:59:00"))
+        {
+            // Too late, wait for tomorrow
+            firstPoll = firstPoll.AddDays(1);
+        }
+
+        var nextPollDay = firstPoll;
+        while (true)
+        {
+            var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse("23:59:00"));
+            var idleTime = nextPollTime - now;
+            Console.WriteLine($"Waiting for {idleTime}");
+            await Task.Delay(idleTime);
+            Console.WriteLine("Executing scheduled poll...");
+            var dayNumber = nextPollDay.DayNumber - WordleUtil.DayOne.DayNumber;
+
+            if (!_results.Results.ContainsKey(dayNumber))
+            {
+                Console.WriteLine($"Nobody has done day {dayNumber}, ignoring");
+            }
+            else
+            {
+                await TryAnnounceDayAsync(dayNumber);
+            }
+
+            nextPollDay = nextPollDay.AddDays(1);
         }
     }
 }

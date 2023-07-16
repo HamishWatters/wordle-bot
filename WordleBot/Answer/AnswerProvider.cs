@@ -1,12 +1,10 @@
-using System.Globalization;
 using System.Text.Json;
+using WordleBot.Wordle;
 
 namespace WordleBot.Answer;
 
 public class AnswerProvider
 {
-    private static readonly DateOnly DayOne =
-        DateOnly.ParseExact("2021-06-19", "yyyy-MM-dd", CultureInfo.InvariantCulture);
     
     private readonly HttpClient _http = new();
 
@@ -14,7 +12,7 @@ public class AnswerProvider
     {
         try
         {
-            var dayDate = DayOne.AddDays(day);
+            var dayDate = WordleUtil.DayOne.AddDays(day);
             var formatted = $"{dayDate.Year}-{dayDate.Month:D2}-{dayDate.Day:D2}";
             var url = $"https://www.nytimes.com/svc/wordle/v2/{formatted}.json";
             var response = await _http.GetAsync(url);
