@@ -9,6 +9,6 @@ public class MessageConfig
     public string RunnersUpFormat { get; set; } = "{0} - {1}: {2} points";
     
     public string CommandUnknownDay { get; set; } = "Day {0} has not been seen yet";
-    public string CommandNotAdmin { get; set; } = "User is not allowed to do that";
+    public string CommandNotAdmin { get; set; } = "{0} is not allowed to do that";
     public string CommandUnknown { get; set; } = "Unknown command";
 }

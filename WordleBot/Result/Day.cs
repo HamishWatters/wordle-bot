@@ -7,7 +7,7 @@ public class Day
 {
     private readonly int _dayNumber;
     
-    public Dictionary<string, User> Results { get; } = new();
+    public Dictionary<ulong, User> Results { get; } = new();
     public bool Announced { get; set; }
 
     public Day(int dayNumber)
@@ -15,24 +15,25 @@ public class Day
         _dayNumber = dayNumber;
     }
 
-    public DayAddUserResult AddUserResult(string username, DateTimeOffset timestamp, WordleValidateResult result, int score,
+    public DayAddUserResult AddUserResult(ulong userId, DateTimeOffset timestamp, WordleValidateResult result, int score,
         Func<Day, bool> winCondition)
     {
-        if (Results.ContainsKey(username))
+        if (Results.ContainsKey(userId))
         {
             return DayAddUserResult.Known;
         }
 
-        Results[username] = new User(timestamp, result.Attempts!.Value, score);
+        Results[userId] = new User(timestamp, result.Attempts!.Value, score);
         return winCondition.Invoke(this) ? DayAddUserResult.Win : DayAddUserResult.New;
     }
 
-    public string GetWinMessage(string winnerFormat, string answerFormat, string runnersUpFormat, string? answer = null)
+    public string GetWinMessage(string winnerFormat, string answerFormat, string runnersUpFormat, Dictionary<ulong, string> names, string? answer = null)
     {
         var results = GetSortedList();
         var builder = new StringBuilder();
         var winner = results[0];
-        builder.Append(string.Format(winnerFormat, _dayNumber, winner.Key, winner.Value.Attempts, winner.Value.Score));
+        var winnerName = names[winner.Key];
+        builder.Append(string.Format(winnerFormat, _dayNumber, winnerName, winner.Value.Attempts, winner.Value.Score));
         if (answer != null)
         {
             builder.Append('\n');
@@ -42,7 +43,8 @@ public class Day
         for (var i = 1; i < results.Count; i++)
         {
             builder.Append('\n');
-            builder.Append(string.Format(runnersUpFormat, i + 1, results[i].Key, results[i].Value.Score));
+            var name = names[results[i].Key];
+            builder.Append(string.Format(runnersUpFormat, i + 1, name, results[i].Value.Score));
         }
 
         return builder.ToString();
@@ -64,7 +66,7 @@ public class Day
         return builder.ToString();
     }
 
-    private List<KeyValuePair<string, User>> GetSortedList()
+    private List<KeyValuePair<ulong, User>> GetSortedList()
     {
         var results = Results.ToList();
         results.Sort((a, b) =>

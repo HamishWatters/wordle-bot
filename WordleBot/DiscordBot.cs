@@ -15,7 +15,7 @@ public class DiscordBot
     private readonly ulong _botId;
     
     private readonly bool _testMode;
-    private readonly IList<string> _adminNames;
+    private readonly IList<ulong> _adminIds;
     private readonly MessageConfig _messageConfig;
     
     private readonly DiscordSocketClient _discordClient;
@@ -31,20 +31,31 @@ public class DiscordBot
         _winnerChannelId = config.WinnerChannel;
         _botId = config.Bot;
         _testMode = config.TestMode;
-        _adminNames = config.Admins;
+        _adminIds = config.Admins;
         _messageConfig = config.Message;
         
         var discordConfig = new DiscordSocketConfig
         {
-            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMembers
         };
         
         _discordClient = new DiscordSocketClient(discordConfig);
         _discordClient.Ready += ReadyHandler;
         _discordClient.MessageReceived += MessageReceivedHandler;
+        _discordClient.Connected += () =>
+        {
+            Console.WriteLine("Bot is connected");
+            return Task.CompletedTask;
+        };
+        _discordClient.Disconnected += a =>
+        {
+            Console.WriteLine("Bot is disconnected");
+            Console.WriteLine(a);
+            return Task.CompletedTask;
+        };
 
         var requiredNames = config.RequiredUsers;
-        _results = new BotResults(day => requiredNames.All(name => day.Results.ContainsKey(name)));
+        _results = new BotResults(day => requiredNames.All(id => day.Results.ContainsKey(id)));
 
         _commandParser = new CommandParser(config.Command);
         
@@ -118,17 +129,17 @@ public class DiscordBot
         {
             if (live)
             {
-                await ProcessCommand(message.Author.Username, maybeCommand);
+                await ProcessCommand(message.Author.Id, maybeCommand);
             }
         }
         else
         {
-            var response = _results.ReceiveWordleMessage(message.Author.Username, message.Timestamp, message.Content);
-            await HandleMessageResultAsync(response, message.Author.Username, live);
+            var response = _results.ReceiveWordleMessage(message.Author.Id, message.Timestamp, message.Content);
+            await HandleMessageResultAsync(response, message.Author.Id, live);
         }
     }
 
-    private async Task ProcessCommand(string username, Command command)
+    private async Task ProcessCommand(ulong id, Command command)
     {
         switch (command.Type)
         {
@@ -137,7 +148,7 @@ public class DiscordBot
                 break;
             
             case CommandType.End:
-                await ProcessEnd(username, command.Day!.Value);
+                await ProcessEnd(id, command.Day!.Value);
                 break;
             
             case CommandType.Unknown:
@@ -160,15 +171,17 @@ public class DiscordBot
         }
     }
 
-    private async Task ProcessEnd(string username, int day)
+    private async Task ProcessEnd(ulong id, int day)
     {
-        if (_adminNames.Contains(username))
+        if (_adminIds.Contains(id))
         {
             if (_results.Results.TryGetValue(day, out var dayResult))
             {
                 var answer = await _answerProvider.GetAsync(day);
+                var names = await GetDisplayNameMap(dayResult.Results.Keys);
                 await SendMessageAsync(_winnerChannelId,
-                    dayResult.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+                    dayResult.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat,
+                        _messageConfig.RunnersUpFormat, names, answer));
             }
             else
             {
@@ -177,10 +190,19 @@ public class DiscordBot
         }
         else
         {
-            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandNotAdmin));
+            var name = await ResolveName(id);
+            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandNotAdmin, name));
         }
     }
-    
+
+    private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)
+    {
+        var ret = new Dictionary<ulong, string>();
+        var tasks = ids.Select(async id => ret[id] = await ResolveName(id));
+        await Task.WhenAll(tasks);
+        return ret;
+    }
+
     private async Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
     {
         if (message.Author.Id != _botId)
@@ -190,10 +212,10 @@ public class DiscordBot
         }
 
         var response = _results.ReceiveWinnerMessage(message.Content);
-        await HandleMessageResultAsync(response, message.Author.Username, live);
+        await HandleMessageResultAsync(response, message.Author.Id, live);
     }
 
-    private async Task HandleMessageResultAsync(MessageResult response, string author, bool live)
+    private async Task HandleMessageResultAsync(MessageResult response, ulong id, bool live)
     {
         switch (response.Type)
         {
@@ -209,7 +231,8 @@ public class DiscordBot
             case MessageResultType.AlreadySubmitted:
                 if (live)
                 {
-                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmittedFormat, author, response.Day));
+                    var name = await ResolveName(id);
+                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmittedFormat, name, response.Day));
                 }
 
                 break;
@@ -217,8 +240,9 @@ public class DiscordBot
             case MessageResultType.AlreadyAnnounced:
                 if (live)
                 {
+                    var name = await ResolveName(id);
                     await SendMessageAsync(_wordleChannelId,
-                        string.Format(_messageConfig.SubmittedTooLateFormat, author, response.Day));
+                        string.Format(_messageConfig.SubmittedTooLateFormat, name, response.Day));
                 }
 
                 break;
@@ -232,12 +256,38 @@ public class DiscordBot
         {
             day.Announced = true;
             var answer = await _answerProvider.GetAsync(dayNumber);
+            var names = await GetDisplayNameMap(day.Results.Keys);
             await SendMessageAsync(_winnerChannelId,
-                day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat, _messageConfig.RunnersUpFormat, answer));
+                day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat,
+                    _messageConfig.RunnersUpFormat, names, answer));
         }
         else
         {
             Console.WriteLine("Not sending because it's announced");
+        }
+    }  
+
+    private async Task<string> ResolveName(ulong userId, string fallbackName = "?????")
+    {
+        try
+        {
+            var user = await _discordClient.GetUserAsync(userId);
+            if (user == null)
+            {
+                return fallbackName;
+            }
+
+            if (user.GlobalName != null)
+            {
+                return user.GlobalName;
+            }
+
+            return user.Username ?? fallbackName;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return fallbackName;
         }
     }
 

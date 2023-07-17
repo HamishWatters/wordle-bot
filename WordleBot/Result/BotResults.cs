@@ -13,7 +13,7 @@ public class BotResults
         _winCondition = winCondition;
     }
 
-    public MessageResult ReceiveWordleMessage(string authorUsername, DateTimeOffset timestamp, string messageContent)
+    public MessageResult ReceiveWordleMessage(ulong userId, DateTimeOffset timestamp, string messageContent)
     {
         var validateResult = WordleProcessor.Validate(messageContent);
 
@@ -29,7 +29,7 @@ public class BotResults
             if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced, day);
 
             var score = WordleProcessor.Score(validateResult, messageContent);
-            var addResult = dayResult.AddUserResult(authorUsername, timestamp, validateResult, score, _winCondition);
+            var addResult = dayResult.AddUserResult(userId, timestamp, validateResult, score, _winCondition);
 
             return addResult switch
             {
