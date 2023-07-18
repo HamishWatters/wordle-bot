@@ -50,7 +50,7 @@ public class Day
         return builder.ToString();
     }
 
-    public string GetListForMsg(string runnersUpFormat)
+    public string GetListForMsg(string runnersUpFormat, Dictionary<ulong, string> names)
     {
         var results = GetSortedList();
         var builder = new StringBuilder();
@@ -60,7 +60,9 @@ public class Day
             {
                 builder.Append('\n');
             }
-            builder.Append(string.Format(runnersUpFormat, i + 1, results[i].Key, results[i].Value.Score));
+
+            var name = names[results[i].Key];
+            builder.Append(string.Format(runnersUpFormat, i + 1, name, results[i].Value.Score));
         }
 
         return builder.ToString();

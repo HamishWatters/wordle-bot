@@ -26,7 +26,6 @@ public class BotResults
             }
 
             var dayResult = Results[day];
-            if (dayResult.Announced) return new MessageResult(MessageResultType.AlreadyAnnounced, day);
 
             var score = WordleProcessor.Score(validateResult, messageContent);
             var addResult = dayResult.AddUserResult(userId, timestamp, validateResult, score, _winCondition);

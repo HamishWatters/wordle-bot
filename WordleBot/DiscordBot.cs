@@ -78,8 +78,8 @@ public class DiscordBot
                 throw new Exception("No guild found");
             }
 
-            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", HandleWinnerChannelMessageAsync);
-            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", HandleWordleChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", 100, HandleWinnerChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
 
             Console.WriteLine("Startup finished");
         }
@@ -90,7 +90,7 @@ public class DiscordBot
         }
     }
 
-    private static async Task ReadyHandlerChannel(SocketGuild guild, ulong channelId, string channelDescription, Func<IMessage, bool, Task> messageAction)
+    private static async Task ReadyHandlerChannel(SocketGuild guild, ulong channelId, string channelDescription, int messages, Func<IMessage, bool, Task> messageAction)
     {
         var channel = guild.GetTextChannel(channelId);
         if (channel == null)
@@ -98,7 +98,7 @@ public class DiscordBot
             throw new Exception($"No {channelDescription} channel found");
         }
 
-        await foreach (var page in channel.GetMessagesAsync())
+        await foreach (var page in channel.GetMessagesAsync(messages))
         {
             foreach (var message in page)
             {
@@ -163,7 +163,8 @@ public class DiscordBot
     {
         if (_results.Results.TryGetValue(day, out var dayResult))
         {
-            await SendMessageAsync(_wordleChannelId, dayResult.GetListForMsg(_messageConfig.RunnersUpFormat));
+            var names = await GetDisplayNameMap(dayResult.Results.Keys);
+            await SendMessageAsync(_wordleChannelId, dayResult.GetListForMsg(_messageConfig.RunnersUpFormat, names));
         }
         else
         {
@@ -237,15 +238,6 @@ public class DiscordBot
 
                 break;
             
-            case MessageResultType.AlreadyAnnounced:
-                if (live)
-                {
-                    var name = await ResolveName(id);
-                    await SendMessageAsync(_wordleChannelId,
-                        string.Format(_messageConfig.SubmittedTooLateFormat, name, response.Day));
-                }
-
-                break;
         }
     }
 
