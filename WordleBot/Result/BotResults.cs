@@ -27,7 +27,7 @@ public class BotResults
 
             var dayResult = Results[day];
 
-            var score = WordleProcessor.Score(validateResult, messageContent);
+            var score = WordleProcessor.Score(validateResult, messageContent, userId);
             var addResult = dayResult.AddUserResult(userId, timestamp, validateResult, score, _winCondition);
 
             return addResult switch
