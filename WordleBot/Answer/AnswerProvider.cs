@@ -23,7 +23,7 @@ public class AnswerProvider
             var answer = JsonSerializer.Deserialize<AnswerResponse>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             if (answer == null)
             {
-                Console.WriteLine($"Failed to parse JSON: {json}");
+                Console.WriteLine($"{DateTime.Now} - Failed to parse JSON: {json}");
                 return null;
             }
             return answer.Solution.ToUpper();
@@ -31,7 +31,7 @@ public class AnswerProvider
         }
         catch (Exception e)
         {
-            Console.WriteLine("Failed to get todays answer");
+            Console.WriteLine($"{DateTime.Now} - Failed to get todays answer");
             Console.WriteLine(e);
             return null;
         }

@@ -44,12 +44,12 @@ public class DiscordBot
         _discordClient.MessageReceived += MessageReceivedHandler;
         _discordClient.Connected += () =>
         {
-            Console.WriteLine("Bot is connected");
+            Console.WriteLine($"{DateTime.Now} - Bot is connected");
             return Task.CompletedTask;
         };
         _discordClient.Disconnected += a =>
         {
-            Console.WriteLine("Bot is disconnected");
+            Console.WriteLine($"{DateTime.Now} - Bot is disconnected");
             Console.WriteLine(a);
             return Task.CompletedTask;
         };
@@ -81,7 +81,7 @@ public class DiscordBot
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", 100, HandleWinnerChannelMessageAsync);
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
 
-            Console.WriteLine("Startup finished");
+            Console.WriteLine($"{DateTime.Now} - Startup finished");
         }
         catch (Exception e)
         {
@@ -153,7 +153,7 @@ public class DiscordBot
             
             case CommandType.Unknown:
             default:
-                Console.WriteLine("Unknown command");
+                Console.WriteLine($"{DateTime.Now} - Unknown command");
                 await SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
                 break;
         }
@@ -255,7 +255,7 @@ public class DiscordBot
         }
         else
         {
-            Console.WriteLine("Not sending because it's announced");
+            Console.WriteLine($"{DateTime.Now} - Not sending because it's announced");
         }
     }  
 
@@ -287,7 +287,7 @@ public class DiscordBot
     {
         if (_testMode)
         {
-            Console.WriteLine("Not sending message properly as we are in test mode");
+            Console.WriteLine($"{DateTime.Now} - Not sending message properly as we are in test mode");
             Console.WriteLine($"Sending to {channelId}: \"{message}\"");
         }
         else
@@ -328,14 +328,14 @@ public class DiscordBot
         {
             var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse("23:59:00"));
             var idleTime = nextPollTime - now;
-            Console.WriteLine($"Waiting for {idleTime}");
+            Console.WriteLine($"{DateTime.Now} - Waiting for {idleTime}");
             await Task.Delay(idleTime);
-            Console.WriteLine("Executing scheduled poll...");
+            Console.WriteLine($"{DateTime.Now} - Executing scheduled poll...");
             var dayNumber = nextPollDay.DayNumber - WordleUtil.DayOne.DayNumber;
 
             if (!_results.Results.ContainsKey(dayNumber))
             {
-                Console.WriteLine($"Nobody has done day {dayNumber}, ignoring");
+                Console.WriteLine($"{DateTime.Now} - Nobody has done day {dayNumber}, ignoring");
             }
             else
             {
