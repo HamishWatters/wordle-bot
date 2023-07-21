@@ -81,7 +81,7 @@ public class Day
             comparison = right.Score.CompareTo(left.Score);
             if (comparison != 0) return comparison;
 
-            return right.Timestamp.CompareTo(left.Timestamp);
+            return left.Timestamp.CompareTo(right.Timestamp);
         });
         return results;
     }
