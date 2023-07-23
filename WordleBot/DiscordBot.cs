@@ -327,6 +327,7 @@ public class DiscordBot
         while (true)
         {
             var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse("23:59:00"));
+            now = DateTime.Now;
             var idleTime = nextPollTime - now;
             Console.WriteLine($"{DateTime.Now} - Waiting for {idleTime}");
             await Task.Delay(idleTime);
