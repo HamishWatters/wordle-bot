@@ -96,7 +96,7 @@ public static class WordleProcessor
         }
 
         var lines = input.Split('\n');
-        var attempts = result.Attempts!.Value;
+        var attempts = Math.Min(result.Attempts!.Value, 6);
         var solution = new string[attempts];
         Array.Copy(lines, 2, solution, 0, attempts);
         return OriginalScoring(attempts, solution);
