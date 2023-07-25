@@ -260,7 +260,7 @@ public class DiscordBot
         }
         else
         {
-            _log.Information("Not sending because it's announced");
+            _log.Information($"Not sending result for {dayNumber} because it's announced");
         }
     }  
 
