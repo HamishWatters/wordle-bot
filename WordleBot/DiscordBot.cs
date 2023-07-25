@@ -59,7 +59,7 @@ public class DiscordBot
 
         _commandParser = new CommandParser(config.Command);
         
-        ScheduleDailyPollBackground();
+        ScheduleDailyPollBackground(config.ScheduledCheckTime);
     }
 
     public async Task Launch(string token)
@@ -308,16 +308,16 @@ public class DiscordBot
         }
     }
 
-    private void ScheduleDailyPollBackground()
+    private void ScheduleDailyPollBackground(string pollTime)
     {
-        ScheduleDailyPoll();
+        ScheduleDailyPoll(pollTime);
     }
 
-    private async void ScheduleDailyPoll()
+    private async void ScheduleDailyPoll(string pollTime)
     {
         var now = DateTime.Now;
         var firstPoll = DateOnly.FromDateTime(now);
-        if (TimeOnly.FromDateTime(now) > TimeOnly.Parse("23:59:00"))
+        if (TimeOnly.FromDateTime(now) > TimeOnly.Parse(pollTime))
         {
             // Too late, wait for tomorrow
             firstPoll = firstPoll.AddDays(1);
@@ -326,7 +326,7 @@ public class DiscordBot
         var nextPollDay = firstPoll;
         while (true)
         {
-            var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse("23:59:00"));
+            var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse(pollTime));
             now = DateTime.Now;
             var idleTime = nextPollTime - now;
             Console.WriteLine($"{DateTime.Now} - Waiting for {idleTime}");
