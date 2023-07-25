@@ -1,5 +1,7 @@
 using Discord;
 using Discord.WebSocket;
+using Serilog;
+using Serilog.Core;
 using WordleBot.Answer;
 using WordleBot.Commands;
 using WordleBot.Result;
@@ -9,6 +11,7 @@ namespace WordleBot;
 
 public class DiscordBot
 {
+    private readonly ILogger _log;
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
     private readonly ulong _winnerChannelId;
@@ -22,10 +25,13 @@ public class DiscordBot
     private readonly BotResults _results;
     private readonly CommandParser _commandParser;
 
-    private readonly AnswerProvider _answerProvider = new();
+    private readonly AnswerProvider _answerProvider;
     
-    public DiscordBot(Config config)
+    public DiscordBot(Config config, ILogger log)
     {
+        _log = log;
+        _answerProvider = new AnswerProvider(log);
+        
         _guildId = config.GuildChannel;
         _wordleChannelId = config.WordleChannel;
         _winnerChannelId = config.WinnerChannel;
@@ -44,13 +50,12 @@ public class DiscordBot
         _discordClient.MessageReceived += MessageReceivedHandler;
         _discordClient.Connected += () =>
         {
-            Console.WriteLine($"{DateTime.Now} - Bot is connected");
+            _log.Debug("Bot is connected");
             return Task.CompletedTask;
         };
-        _discordClient.Disconnected += a =>
+        _discordClient.Disconnected += exception =>
         {
-            Console.WriteLine($"{DateTime.Now} - Bot is disconnected");
-            Console.WriteLine(a);
+            _log.Debug(exception, "Bot is disconnected");
             return Task.CompletedTask;
         };
 
@@ -81,11 +86,11 @@ public class DiscordBot
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", 100, HandleWinnerChannelMessageAsync);
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
 
-            Console.WriteLine($"{DateTime.Now} - Startup finished");
+            _log.Information("Startup finished");
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            _log.Error(e, "Error during startup");
             throw;
         }
     }
@@ -153,7 +158,7 @@ public class DiscordBot
             
             case CommandType.Unknown:
             default:
-                Console.WriteLine($"{DateTime.Now} - Unknown command");
+                _log.Warning("Unknown command");
                 await SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
                 break;
         }
@@ -255,7 +260,7 @@ public class DiscordBot
         }
         else
         {
-            Console.WriteLine($"{DateTime.Now} - Not sending because it's announced");
+            _log.Information("Not sending because it's announced");
         }
     }  
 
@@ -278,7 +283,7 @@ public class DiscordBot
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            _log.Warning(e, $"Error resolving name '{userId}'");
             return fallbackName;
         }
     }
@@ -287,8 +292,8 @@ public class DiscordBot
     {
         if (_testMode)
         {
-            Console.WriteLine($"{DateTime.Now} - Not sending message properly as we are in test mode");
-            Console.WriteLine($"Sending to {channelId}: \"{message}\"");
+            _log.Information("Not sending message properly as we are in test mode");
+            _log.Information($"Sending to {channelId}: \"{message}\"");
         }
         else
         {
@@ -329,14 +334,14 @@ public class DiscordBot
             var nextPollTime = nextPollDay.ToDateTime(TimeOnly.Parse(pollTime));
             now = DateTime.Now;
             var idleTime = nextPollTime - now;
-            Console.WriteLine($"{DateTime.Now} - Waiting for {idleTime}");
+            _log.Information($"Waiting {idleTime} for daily poll");
             await Task.Delay(idleTime);
-            Console.WriteLine($"{DateTime.Now} - Executing scheduled poll...");
+            _log.Information("Executing daily poll...");
             var dayNumber = nextPollDay.DayNumber - WordleUtil.DayOne.DayNumber;
 
             if (!_results.Results.ContainsKey(dayNumber))
             {
-                Console.WriteLine($"{DateTime.Now} - Nobody has done day {dayNumber}, ignoring");
+                _log.Information($"Nobody has done day {dayNumber}, skipping daily poll");
             }
             else
             {

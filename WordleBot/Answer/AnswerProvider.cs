@@ -1,10 +1,17 @@
 using System.Text.Json;
+using Serilog;
 using WordleBot.Wordle;
 
 namespace WordleBot.Answer;
 
 public class AnswerProvider
 {
+    private readonly ILogger _log;
+
+    public AnswerProvider(ILogger log)
+    {
+        _log = log;
+    }
     
     private readonly HttpClient _http = new();
 
@@ -21,18 +28,15 @@ public class AnswerProvider
             var json = await response.Content.ReadAsStringAsync();
 
             var answer = JsonSerializer.Deserialize<AnswerResponse>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-            if (answer == null)
-            {
-                Console.WriteLine($"{DateTime.Now} - Failed to parse JSON: {json}");
-                return null;
-            }
-            return answer.Solution.ToUpper();
+            if (answer != null) return answer.Solution.ToUpper();
+            
+            _log.Error($"Failed to parse JSON: {json}");
+            return null;
 
         }
         catch (Exception e)
         {
-            Console.WriteLine($"{DateTime.Now} - Failed to get todays answer");
-            Console.WriteLine(e);
+            _log.Error(e, $"Failed to get answer for day {day}");
             return null;
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Serilog;
 
 namespace WordleBot;
 
@@ -18,7 +19,13 @@ public static class Program
                      throw new Exception("Failed to parse input config file");
         }
 
-        var bot = new DiscordBot(config);
+        var logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File("hambot.log")
+            .CreateLogger();
+
+        var bot = new DiscordBot(config, logger);
         await bot.Launch(config.ApiToken);
         await Task.Delay(-1);
     }
