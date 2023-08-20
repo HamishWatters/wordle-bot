@@ -14,9 +14,10 @@ public class CommandParser
 
     public Command? Parse(string input)
     {
-        if (!input.StartsWith(_commandPrefix)) return null;
+        var loweredInput = input.ToLowerInvariant();
+        if (!loweredInput.StartsWith(_commandPrefix)) return null;
 
-        var remaining = input[_commandPrefix.Length..].TrimStart();
+        var remaining = loweredInput[_commandPrefix.Length..].TrimStart();
         
         if (remaining.StartsWith(_listCommand))
         {
