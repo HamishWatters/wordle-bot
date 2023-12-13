@@ -129,7 +129,7 @@ public class DiscordBot
     private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
         
-        var maybeCommand = _commandParser.Parse(message.Content);
+        var maybeCommand = _commandParser.Parse(message.Content, message.Timestamp);
         if (maybeCommand != null)
         {
             if (live)

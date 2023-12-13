@@ -1,3 +1,5 @@
+using WordleBot.Wordle;
+
 namespace WordleBot.Commands;
 
 public class CommandParser
@@ -12,7 +14,7 @@ public class CommandParser
         _endCommand = config.End;
     }
 
-    public Command? Parse(string input)
+    public Command? Parse(string input, DateTimeOffset timestamp)
     {
         var loweredInput = input.ToLowerInvariant();
         if (!loweredInput.StartsWith(_commandPrefix)) return null;
@@ -21,7 +23,7 @@ public class CommandParser
         
         if (remaining.StartsWith(_listCommand))
         {
-            return ParseList(remaining[_listCommand.Length..].TrimStart());
+            return ParseList(remaining[_listCommand.Length..].TrimStart(), timestamp);
         }
 
         if (remaining.StartsWith(_endCommand))
@@ -32,10 +34,17 @@ public class CommandParser
         return Command.Unknown();
     }
 
-    private static Command ParseList(string input)
+    private static Command ParseList(string input, DateTimeOffset timestamp)
     {
         var dayString = input.Split(' ')[0];
-        return int.TryParse(dayString, out var days) ? Command.List(days) : Command.Unknown();
+        if (!string.IsNullOrWhiteSpace(dayString))
+        {
+            return int.TryParse(dayString, out var days) ? Command.List(days) : Command.Unknown();
+        }
+
+        var date = DateOnly.FromDateTime(timestamp.Date);
+        var dayNumber = date.DayNumber - WordleUtil.DayOne.DayNumber;
+        return Command.List(dayNumber);
     }
 
     private static Command ParseEnd(string input)
