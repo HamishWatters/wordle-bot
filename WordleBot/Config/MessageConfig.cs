@@ -9,5 +9,6 @@ public class MessageConfig
     
     public string CommandUnknownDay { get; set; } = "Day {0} has not been seen yet";
     public string CommandNotAdmin { get; set; } = "{0} is not allowed to do that";
+    public string RoundupEarly { get; set; } = "Cannot do another roundup now, try again later";
     public string CommandUnknown { get; set; } = "Unknown command";
 }

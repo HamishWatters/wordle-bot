@@ -11,7 +11,7 @@ public static class WordleProcessor
         "^Wordle\\s(\\d+)\\s([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
         );
 
-    private static readonly Regex WinnerRegex = new(
+    public static readonly Regex WinnerRegex = new(
         "^Wordle (\\d+) winner is (.+)! Who scored ([1-6X])/6 \\((\\d{1,2}|100)\\)\\."
         );
     

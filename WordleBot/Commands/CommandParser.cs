@@ -7,11 +7,14 @@ public class CommandParser
     private readonly string _commandPrefix;
     private readonly string _listCommand;
     private readonly string _endCommand;
+    private readonly string _roundupCommand;
+    
     public CommandParser(CommandConfig config)
     {
         _commandPrefix = config.Prefix;
         _listCommand = config.List;
         _endCommand = config.End;
+        _roundupCommand = config.RoundUp;
     }
 
     public Command? Parse(string input, DateTimeOffset timestamp)
@@ -29,6 +32,11 @@ public class CommandParser
         if (remaining.StartsWith(_endCommand))
         {
             return ParseEnd(remaining[_endCommand.Length..].TrimStart());
+        }
+
+        if (remaining.StartsWith(_roundupCommand))
+        {
+            return Command.RoundUp();
         }
 
         return Command.Unknown();

@@ -20,12 +20,15 @@ public class DiscordBot
     private readonly bool _testMode;
     private readonly IList<ulong> _adminIds;
     private readonly MessageConfig _messageConfig;
+    private readonly IDictionary<string, IList<string>> _userNames;
     
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results;
     private readonly CommandParser _commandParser;
 
     private readonly AnswerProvider _answerProvider;
+
+    private DateTime _nextAllowedRoundup = DateTime.Now;
     
     public DiscordBot(Config config, ILogger log)
     {
@@ -39,6 +42,7 @@ public class DiscordBot
         _testMode = config.TestMode;
         _adminIds = config.Admins;
         _messageConfig = config.Message;
+        _userNames = config.UserNames;
         
         var discordConfig = new DiscordSocketConfig
         {
@@ -85,7 +89,7 @@ public class DiscordBot
 
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", 100, HandleWinnerChannelMessageAsync);
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
-
+            
             _log.Information("Startup finished");
         }
         catch (Exception e)
@@ -93,6 +97,45 @@ public class DiscordBot
             _log.Error(e, "Error during startup");
             throw;
         }
+    }
+
+    private async Task CheckYearAsync()
+    {
+        _nextAllowedRoundup = DateTime.Now.AddMinutes(5);
+        
+        var guild = _discordClient.GetGuild(_guildId);
+        if (guild == null)
+        {
+            throw new Exception("No guild found");
+        }
+        
+        var channel = guild.GetTextChannel(_winnerChannelId);
+        if (channel == null)
+        {
+            throw new Exception($"No channel found");
+        }
+
+        var tracking = new Tracking(_userNames);
+        
+        var currentYear = DateTime.Now.Year;
+        await foreach (var page in channel.GetMessagesAsync(1000))
+        {
+            foreach (var message in page)
+            {
+                if (message.Timestamp.Year != currentYear)
+                {
+                    goto LoopEnd;
+                }
+
+                if (message.Author.Id == _botId)
+                {
+                    tracking.Feed(message.Content);
+                }
+            }
+        }
+        LoopEnd:
+        var reply = tracking.GetOutput();
+        await SendMessageAsync(_wordleChannelId, reply);
     }
 
     private static async Task ReadyHandlerChannel(SocketGuild guild, ulong channelId, string channelDescription, int messages, Func<IMessage, bool, Task> messageAction)
@@ -128,7 +171,6 @@ public class DiscordBot
 
     private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
-        
         var maybeCommand = _commandParser.Parse(message.Content, message.Timestamp);
         if (maybeCommand != null)
         {
@@ -154,6 +196,10 @@ public class DiscordBot
             
             case CommandType.End:
                 await ProcessEnd(id, command.Day!.Value);
+                break;
+            
+            case CommandType.RoundUp:
+                await ProcessRoundup();
                 break;
             
             case CommandType.Unknown:
@@ -199,6 +245,18 @@ public class DiscordBot
             var name = await ResolveName(id);
             await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandNotAdmin, name));
         }
+    }
+
+    private async Task ProcessRoundup()
+    {
+        var now = DateTime.Now;
+        if (now.CompareTo(_nextAllowedRoundup) < 0)
+        {
+            await SendMessageAsync(_wordleChannelId, _messageConfig.RoundupEarly);
+            return;
+        }
+
+        await CheckYearAsync();
     }
 
     private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)

@@ -21,6 +21,11 @@ public class Command
         return new Command(CommandType.End, day);
     }
 
+    public static Command RoundUp()
+    {
+        return new Command(CommandType.RoundUp, null);
+    }
+
     public static Command Unknown()
     {
         return new Command(CommandType.Unknown, null);
@@ -31,5 +36,6 @@ public enum CommandType
 {
     List,
     End,
+    RoundUp,
     Unknown
 }
