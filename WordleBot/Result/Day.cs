@@ -3,17 +3,10 @@ using WordleBot.Wordle;
 
 namespace WordleBot.Result;
 
-public class Day
+public class Day(int dayNumber)
 {
-    private readonly int _dayNumber;
-    
     public Dictionary<ulong, User> Results { get; } = new();
     public bool Announced { get; set; }
-
-    public Day(int dayNumber)
-    {
-        _dayNumber = dayNumber;
-    }
 
     public DayAddUserResult AddUserResult(ulong userId, DateTimeOffset timestamp, WordleValidateResult result, int score,
         Func<Day, bool> winCondition)
@@ -33,7 +26,7 @@ public class Day
         var builder = new StringBuilder();
         var winner = results[0];
         var winnerName = names[winner.Key];
-        builder.Append(string.Format(winnerFormat, _dayNumber, winnerName, winner.Value.Attempts, winner.Value.Score));
+        builder.Append(string.Format(winnerFormat, dayNumber, winnerName, winner.Value.Attempts, winner.Value.Score));
         if (answer != null)
         {
             builder.Append('\n');

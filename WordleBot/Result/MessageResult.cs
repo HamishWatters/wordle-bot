@@ -16,5 +16,5 @@ public enum MessageResultType
 {
     Continue,
     Winner,
-    AlreadySubmitted,
+    AlreadySubmitted
 }

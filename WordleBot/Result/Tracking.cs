@@ -6,16 +6,16 @@ namespace WordleBot.Result;
 
 public class Tracking(IDictionary<string, IList<string>> userNames)
 {
-    public static readonly Regex RunnerUpRegex = new(
-        "^(\\d+) - (.+): (\\d+) points$"
+    private static readonly Regex RunnerUpRegex = new(
+        @"^(\\d+) - (.+): (\\d+) points$"
     );
     
     private readonly IDictionary<string, string> _displayNameToUserName = FlattenUserNames(userNames);
 
     private readonly Dictionary<string, TrackingUser> _users = new();
-    private readonly HashSet<int> _daysPassed = new();
+    private readonly HashSet<int> _daysPassed = [];
 
-    private static IDictionary<string, string> FlattenUserNames(IDictionary<string, IList<string>>? input)
+    private static Dictionary<string, string> FlattenUserNames(IDictionary<string, IList<string>>? input)
     {
         var ret = new Dictionary<string, string>();
         if (input == null)
@@ -74,7 +74,7 @@ public class Tracking(IDictionary<string, IList<string>> userNames)
 
     private TrackingUser GetTrackingUser(string name)
     {
-        if (_users.TryGetValue(name, out TrackingUser? value)) return value;
+        if (_users.TryGetValue(name, out var value)) return value;
         
         value = new TrackingUser(name);
         _users[name] = value;
@@ -97,7 +97,7 @@ public class Tracking(IDictionary<string, IList<string>> userNames)
         items.Sort((p, q) => q.Wins.CompareTo(p.Wins));
         foreach (var tu in items)
         {
-            var winPercentage = (tu.Wins * 100) / tu.Attempts;
+            var winPercentage = tu.Wins * 100 / tu.Attempts;
             b.Append($"{tu.Name} won {tu.Wins} out of {tu.Attempts}, which is {winPercentage}% of their attempts. Their average score was {tu.AverageScore}\n");
         }
 

@@ -1,4 +1,4 @@
-namespace WordleBot;
+namespace WordleBot.Config;
 
 public class Config
 {

@@ -20,6 +20,7 @@ public class BotResults
         if (validateResult.Type == WordleValidateResultType.Success)
         {
             var day = validateResult.Day!.Value;
+            
             if (!Results.ContainsKey(day))
             {
                 Results[day] = new Day(day);
@@ -50,16 +51,18 @@ public class BotResults
     {
         var announcementResult = WordleProcessor.IsAnnouncement(messageContent);
 
-        if (announcementResult.Type == WordleAnnouncementResultType.Success)
+        if (announcementResult.Type != WordleAnnouncementResultType.Success)
         {
-            var day = announcementResult.Day!.Value;
-            if (!Results.ContainsKey(day))
-            {
-                Results[day] = new Day(day);
-            }
-
-            Results[day].Announced = true;
+            return new MessageResult(MessageResultType.Continue);
         }
+        
+        var day = announcementResult.Day!.Value;
+        if (!Results.ContainsKey(day))
+        {
+            Results[day] = new Day(day);
+        }
+
+        Results[day].Announced = true;
         return new MessageResult(MessageResultType.Continue);
 
     }

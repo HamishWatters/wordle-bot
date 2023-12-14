@@ -12,10 +12,10 @@ public static class Program
         if (args.Count == 0)
             throw new Exception("Missing path to config file");
 
-        Config config;
+        Config.Config config;
         await using (var file = new FileStream(args[0], FileMode.Open))
         {
-            config = JsonSerializer.Deserialize<Config>(file, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase}) ??
+            config = JsonSerializer.Deserialize<Config.Config>(file, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase}) ??
                      throw new Exception("Failed to parse input config file");
         }
 

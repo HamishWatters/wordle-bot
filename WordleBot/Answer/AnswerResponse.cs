@@ -1,3 +1,3 @@
-namespace WordleBot;
+namespace WordleBot.Answer;
 
 public record AnswerResponse(string Solution);

@@ -8,11 +8,11 @@ public static class WordleProcessor
 {
     // Allow between 5 and 10 characters because the coloured squares all use two UTF-16 characters
     private static readonly Regex WordleRegex = new(
-        "^Wordle\\s(\\d+)\\s([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
+        @"^Wordle\\s(\\d+)\\s([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
         );
 
     public static readonly Regex WinnerRegex = new(
-        "^Wordle (\\d+) winner is (.+)! Who scored ([1-6X])/6 \\((\\d{1,2}|100)\\)\\."
+        @"^Wordle (\d+) winner is (.+)! Who scored ([1-6X])/6 \((\d{1,2}|100)\)\."
         );
     
     #region Validation
@@ -152,7 +152,7 @@ public static class WordleProcessor
         Green
     }
 
-    private static Square ParseSquare(byte[] utf32Bytes, int index)
+    private static Square ParseSquare(IReadOnlyList<byte> utf32Bytes, int index)
     {
         if (utf32Bytes[index + 3] != 0x00)
         {

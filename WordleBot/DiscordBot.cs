@@ -1,7 +1,6 @@
 using Discord;
 using Discord.WebSocket;
 using Serilog;
-using Serilog.Core;
 using WordleBot.Answer;
 using WordleBot.Commands;
 using WordleBot.Result;
@@ -30,7 +29,7 @@ public class DiscordBot
 
     private DateTime _nextAllowedRoundup = DateTime.Now;
     
-    public DiscordBot(Config config, ILogger log)
+    public DiscordBot(Config.Config config, ILogger log)
     {
         _log = log;
         _answerProvider = new AnswerProvider(log);
@@ -112,7 +111,7 @@ public class DiscordBot
         var channel = guild.GetTextChannel(_winnerChannelId);
         if (channel == null)
         {
-            throw new Exception($"No channel found");
+            throw new Exception("No channel found");
         }
 
         var tracking = new Tracking(_userNames);
@@ -155,58 +154,59 @@ public class DiscordBot
         }
     }
 
-    private async Task MessageReceivedHandler(SocketMessage message)
+    private Task MessageReceivedHandler(SocketMessage message)
     {
         var channelId = message.Channel.Id;
 
         if (channelId == _wordleChannelId)
         {
-            await HandleWordleChannelMessageAsync(message, true);
+            return HandleWordleChannelMessageAsync(message, true);
         }
-        else if (channelId == _winnerChannelId)
+
+        if (channelId == _winnerChannelId)
         {
-            await HandleWinnerChannelMessageAsync(message, true);
+            return HandleWinnerChannelMessageAsync(message, true);
         }
+
+        return Task.CompletedTask;
     }
 
-    private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
+    private Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
         var maybeCommand = _commandParser.Parse(message.Content, message.Timestamp);
         if (maybeCommand != null)
         {
             if (live)
             {
-                await ProcessCommand(message.Author.Id, maybeCommand);
+                return ProcessCommand(message.Author.Id, maybeCommand);
             }
         }
         else
         {
             var response = _results.ReceiveWordleMessage(message.Author.Id, message.Timestamp, message.Content);
-            await HandleMessageResultAsync(response, message.Author.Id, live);
+            return HandleMessageResultAsync(response, message.Author.Id, live);
         }
+
+        return Task.CompletedTask;
     }
 
-    private async Task ProcessCommand(ulong id, Command command)
+    private Task ProcessCommand(ulong id, Command command)
     {
         switch (command.Type)
         {
             case CommandType.List:
-                await ProcessList(command.Day!.Value);
-                break;
+                return ProcessList(command.Day!.Value);
             
             case CommandType.End:
-                await ProcessEnd(id, command.Day!.Value);
-                break;
+                return ProcessEnd(id, command.Day!.Value);
             
             case CommandType.RoundUp:
-                await ProcessRoundup();
-                break;
+                return ProcessRoundup();
             
             case CommandType.Unknown:
             default:
                 _log.Warning("Unknown command");
-                await SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
-                break;
+                return SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
         }
     }
 
@@ -267,16 +267,16 @@ public class DiscordBot
         return ret;
     }
 
-    private async Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
+    private Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
     {
         if (message.Author.Id != _botId)
         {
             // Only process announcements that the bot sent
-            return;
+            return Task.CompletedTask;
         }
 
         var response = _results.ReceiveWinnerMessage(message.Content);
-        await HandleMessageResultAsync(response, message.Author.Id, live);
+        return HandleMessageResultAsync(response, message.Author.Id, live);
     }
 
     private async Task HandleMessageResultAsync(MessageResult response, ulong id, bool live)
