@@ -26,6 +26,7 @@ public class DiscordBot
     private readonly CommandParser _commandParser;
 
     private readonly AnswerProvider _answerProvider;
+    private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
     private DateTime _nextAllowedRoundup = DateTime.Now;
     
@@ -86,7 +87,10 @@ public class DiscordBot
                 throw new Exception("No guild found");
             }
 
-            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", 100, HandleWinnerChannelMessageAsync);
+            var date = DateOnly.FromDateTime(DateTime.Now);
+            var n = (int)(date.ToDateTime(TimeOnly.MinValue) - WordleUtil.DayOne.ToDateTime(TimeOnly.MinValue)).TotalDays;
+
+            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, HandleWinnerChannelMessageAsync);
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
             
             _log.Information("Startup finished");
@@ -203,6 +207,9 @@ public class DiscordBot
             case CommandType.RoundUp:
                 return ProcessRoundup();
             
+            case CommandType.Seen:
+                return ProcessSeen(command.Word!);
+            
             case CommandType.Unknown:
             default:
                 _log.Warning("Unknown command");
@@ -259,6 +266,12 @@ public class DiscordBot
         await CheckYearAsync();
     }
 
+    private Task ProcessSeen(string word)
+    {
+        var upper = word.ToUpper();
+        return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
+    }
+
     private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)
     {
         var ret = new Dictionary<ulong, string>();
@@ -276,6 +289,7 @@ public class DiscordBot
         }
 
         var response = _results.ReceiveWinnerMessage(message.Content);
+        _previousAnswerTracking.Feed(message.Content);
         return HandleMessageResultAsync(response, message.Author.Id, live);
     }
 

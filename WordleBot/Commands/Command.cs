@@ -4,11 +4,13 @@ public class Command
 {
     public CommandType Type { get; }
     public int? Day { get; }
+    public string? Word { get; }
 
-    private Command(CommandType type, int? day)
+    private Command(CommandType type, int? day = null, string? word = null)
     {
         Type = type;
         Day = day;
+        Word = word;
     }
 
     public static Command List(int day)
@@ -26,6 +28,11 @@ public class Command
         return new Command(CommandType.RoundUp, null);
     }
 
+    public static Command Seen(string word)
+    {
+        return new Command(CommandType.Seen, null, word);
+    }
+
     public static Command Unknown()
     {
         return new Command(CommandType.Unknown, null);
@@ -37,5 +44,6 @@ public enum CommandType
     List,
     End,
     RoundUp,
+    Seen,
     Unknown
 }

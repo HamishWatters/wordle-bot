@@ -8,6 +8,7 @@ public class CommandParser
     private readonly string _listCommand;
     private readonly string _endCommand;
     private readonly string _roundupCommand;
+    private readonly string _seenCommand;
     
     public CommandParser(CommandConfig config)
     {
@@ -15,6 +16,7 @@ public class CommandParser
         _listCommand = config.List;
         _endCommand = config.End;
         _roundupCommand = config.RoundUp;
+        _seenCommand = config.Seen;
     }
 
     public Command? Parse(string input, DateTimeOffset timestamp)
@@ -39,6 +41,11 @@ public class CommandParser
             return Command.RoundUp();
         }
 
+        if (remaining.StartsWith(_seenCommand))
+        {
+            return ParseSeen(remaining[_seenCommand.Length..].TrimStart());
+        }
+
         return Command.Unknown();
     }
 
@@ -59,5 +66,10 @@ public class CommandParser
     {
         var dayString = input.Split(' ')[0];
         return int.TryParse(dayString, out var days) ? Command.End(days) : Command.Unknown();
+    }
+
+    private static Command ParseSeen(string input)
+    {
+        return input.Length != 5 ? Command.Unknown() : Command.Seen(input);
     }
 }
