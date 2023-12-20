@@ -19,9 +19,9 @@ public class CommandParserTest
     [Fact]
     public void Parse_List_MissingDay()
     {
-        _commandParser.Parse("wordle-bot ls", DateTimeOffset.Now)
+        _commandParser.Parse("wordle-bot ls", DateTimeOffset.Parse("2023-12-20T11:00:00Z"))
             .Should()
-            .BeEquivalentTo(Command.Unknown());
+            .BeEquivalentTo(Command.List(914));
     }
 
     [Fact]
