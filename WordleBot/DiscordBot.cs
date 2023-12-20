@@ -91,7 +91,7 @@ public class DiscordBot
             var n = (int)(date.ToDateTime(TimeOnly.MinValue) - WordleUtil.DayOne.ToDateTime(TimeOnly.MinValue)).TotalDays;
 
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, HandleWinnerChannelMessageAsync);
-            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 250, HandleWordleChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, HandleWordleChannelMessageAsync);
             
             _log.Information("Startup finished");
         }
