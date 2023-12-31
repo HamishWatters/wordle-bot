@@ -7,7 +7,7 @@ namespace WordleBot.Result;
 public class Tracking(IDictionary<string, IList<string>> userNames)
 {
     private static readonly Regex RunnerUpRegex = new(
-        @"^(\\d+) - (.+): (\\d+) points$"
+        @"^(\d+) - (.+): (\d+) points$"
     );
     
     private readonly IDictionary<string, string> _displayNameToUserName = FlattenUserNames(userNames);

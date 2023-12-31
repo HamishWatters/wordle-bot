@@ -32,7 +32,6 @@ public class AnswerProvider
             
             _log.Error($"Failed to parse JSON: {json}");
             return null;
-
         }
         catch (Exception e)
         {
