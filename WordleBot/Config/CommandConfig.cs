@@ -1,4 +1,4 @@
-namespace WordleBot;
+namespace WordleBot.Config;
 
 public class CommandConfig
 {
@@ -7,4 +7,5 @@ public class CommandConfig
     public string End { get; set; } = "end";
     public string RoundUp { get; set; } = "roundup";
     public string Seen { get; set; } = "find";
+    public string Help { get; set; } = "help";
 }

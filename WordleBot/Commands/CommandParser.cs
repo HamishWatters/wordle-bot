@@ -1,3 +1,4 @@
+using WordleBot.Config;
 using WordleBot.Wordle;
 
 namespace WordleBot.Commands;
@@ -9,6 +10,7 @@ public class CommandParser
     private readonly string _endCommand;
     private readonly string _roundupCommand;
     private readonly string _seenCommand;
+    private readonly string _helpCommand;
     
     public CommandParser(CommandConfig config)
     {
@@ -17,6 +19,7 @@ public class CommandParser
         _endCommand = config.End;
         _roundupCommand = config.RoundUp;
         _seenCommand = config.Seen;
+        _helpCommand = config.Help;
     }
 
     public Command? Parse(string input, DateTimeOffset timestamp)
@@ -44,6 +47,11 @@ public class CommandParser
         if (remaining.StartsWith(_seenCommand))
         {
             return ParseSeen(remaining[_seenCommand.Length..].TrimStart());
+        }
+
+        if (remaining.StartsWith(_helpCommand))
+        {
+            return Command.Help();
         }
 
         return Command.Unknown();

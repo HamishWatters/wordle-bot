@@ -25,7 +25,7 @@ public class Command
 
     public static Command RoundUp()
     {
-        return new Command(CommandType.RoundUp, null);
+        return new Command(CommandType.RoundUp);
     }
 
     public static Command Seen(string word)
@@ -33,9 +33,14 @@ public class Command
         return new Command(CommandType.Find, null, word);
     }
 
+    public static Command Help()
+    {
+        return new Command(CommandType.Help);
+    }
+
     public static Command Unknown()
     {
-        return new Command(CommandType.Unknown, null);
+        return new Command(CommandType.Unknown);
     }
 }
 
@@ -45,5 +50,6 @@ public enum CommandType
     End,
     RoundUp,
     Find,
-    Unknown
+    Unknown,
+    Help
 }

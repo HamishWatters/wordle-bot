@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Serilog;
 using WordleBot.Answer;
 using WordleBot.Commands;
+using WordleBot.Config;
 using WordleBot.Result;
 using WordleBot.Wordle;
 
@@ -19,6 +20,7 @@ public class DiscordBot
     private readonly bool _testMode;
     private readonly IList<ulong> _adminIds;
     private readonly MessageConfig _messageConfig;
+    private readonly CommandConfig _commandConfig;
     private readonly IDictionary<string, IList<string>> _userNames;
     
     private readonly DiscordSocketClient _discordClient;
@@ -29,7 +31,7 @@ public class DiscordBot
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
     private DateTime _nextAllowedRoundup = DateTime.Now;
-    
+
     public DiscordBot(Config.Config config, ILogger log)
     {
         _log = log;
@@ -42,6 +44,7 @@ public class DiscordBot
         _testMode = config.TestMode;
         _adminIds = config.Admins;
         _messageConfig = config.Message;
+        _commandConfig = config.Command;
         _userNames = config.UserNames;
         
         var discordConfig = new DiscordSocketConfig
@@ -66,7 +69,7 @@ public class DiscordBot
         var requiredNames = config.RequiredUsers;
         _results = new BotResults(day => requiredNames.All(id => day.Results.ContainsKey(id)));
 
-        _commandParser = new CommandParser(config.Command);
+         _commandParser = new CommandParser(config.Command);
         
         ScheduleDailyPollBackground(config.ScheduledCheckTime);
     }
@@ -93,7 +96,6 @@ public class DiscordBot
 
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, HandleWinnerChannelMessageAsync);
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, HandleWordleChannelMessageAsync);
-            
             _log.Information("Startup finished");
         }
         catch (Exception e)
@@ -173,6 +175,9 @@ public class DiscordBot
             
             case CommandType.Find:
                 return ProcessFind(command.Word!);
+            
+            case CommandType.Help:
+                return ProcessHelp();
             
             case CommandType.Unknown:
             default:
@@ -273,6 +278,13 @@ public class DiscordBot
     {
         var upper = word.ToUpper();
         return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
+    }
+
+    private Task ProcessHelp()
+    {
+        var response = string.Format(_messageConfig.Help, _commandConfig.List, _commandConfig.End,
+            _commandConfig.RoundUp, _commandConfig.Seen);
+        return SendMessageAsync(_wordleChannelId, response);
     }
     #endregion
 

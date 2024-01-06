@@ -1,6 +1,7 @@
 using FluentAssertions;
 using WordleBot;
 using WordleBot.Commands;
+using WordleBot.Config;
 
 namespace WordleBotTests.Commands;
 
@@ -79,5 +80,13 @@ public class CommandParserTest
         _commandParser.Parse("wordle-bot find crane", DateTimeOffset.Now)
             .Should()
             .BeEquivalentTo(Command.Seen("crane"));
+    }
+
+    [Fact]
+    public void Parse_Help()
+    {
+        _commandParser.Parse("wordle-bot help", DateTimeOffset.Now)
+            .Should()
+            .BeEquivalentTo(Command.Help());
     }
 }

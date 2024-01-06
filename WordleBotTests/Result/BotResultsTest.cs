@@ -1,6 +1,7 @@
 using System.Globalization;
 using FluentAssertions;
 using WordleBot;
+using WordleBot.Config;
 using WordleBot.Result;
 
 namespace WordleBotTests.Result;
