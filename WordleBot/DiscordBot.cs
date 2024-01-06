@@ -76,7 +76,8 @@ public class DiscordBot
         await _discordClient.LoginAsync(TokenType.Bot, token);
         await _discordClient.StartAsync();
     }
-
+    
+    #region DiscordHandlers
     private async Task ReadyHandler()
     {
         try
@@ -102,44 +103,23 @@ public class DiscordBot
         }
     }
 
-    private async Task CheckYearAsync()
+    private Task MessageReceivedHandler(SocketMessage message)
     {
-        _nextAllowedRoundup = DateTime.Now.AddMinutes(5);
-        
-        var guild = _discordClient.GetGuild(_guildId);
-        if (guild == null)
+        var channelId = message.Channel.Id;
+
+        if (channelId == _wordleChannelId)
         {
-            throw new Exception("No guild found");
-        }
-        
-        var channel = guild.GetTextChannel(_winnerChannelId);
-        if (channel == null)
-        {
-            throw new Exception("No channel found");
+            return HandleWordleChannelMessageAsync(message, true);
         }
 
-        var tracking = new Tracking(_userNames);
-        
-        var currentYear = DateTime.Now.Year;
-        await foreach (var page in channel.GetMessagesAsync(1000))
+        if (channelId == _winnerChannelId)
         {
-            foreach (var message in page)
-            {
-                if (message.Timestamp.Year != currentYear)
-                {
-                    goto LoopEnd;
-                }
-
-                if (message.Author.Id == _botId)
-                {
-                    tracking.Feed(message.Content);
-                }
-            }
+            return HandleWinnerChannelMessageAsync(message, true);
         }
-        LoopEnd:
-        var reply = tracking.GetOutput();
-        await SendMessageAsync(_wordleChannelId, reply);
+
+        return Task.CompletedTask;
     }
+    #endregion
 
     private static async Task ReadyHandlerChannel(SocketGuild guild, ulong channelId, string channelDescription, int messages, Func<IMessage, bool, Task> messageAction)
     {
@@ -156,23 +136,6 @@ public class DiscordBot
                 await messageAction.Invoke(message, false);
             }
         }
-    }
-
-    private Task MessageReceivedHandler(SocketMessage message)
-    {
-        var channelId = message.Channel.Id;
-
-        if (channelId == _wordleChannelId)
-        {
-            return HandleWordleChannelMessageAsync(message, true);
-        }
-
-        if (channelId == _winnerChannelId)
-        {
-            return HandleWinnerChannelMessageAsync(message, true);
-        }
-
-        return Task.CompletedTask;
     }
 
     private Task HandleWordleChannelMessageAsync(IMessage message, bool live)
@@ -193,7 +156,8 @@ public class DiscordBot
 
         return Task.CompletedTask;
     }
-
+    
+    #region CommandHandlers
     private Task ProcessCommand(ulong id, Command command)
     {
         switch (command.Type)
@@ -216,7 +180,7 @@ public class DiscordBot
                 return SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
         }
     }
-
+    
     private async Task ProcessList(int day)
     {
         if (_results.Results.TryGetValue(day, out var dayResult))
@@ -265,12 +229,54 @@ public class DiscordBot
 
         await CheckYearAsync();
     }
+    
+    private async Task CheckYearAsync()
+    {
+        _nextAllowedRoundup = DateTime.Now.AddMinutes(5);
+        
+        var guild = _discordClient.GetGuild(_guildId);
+        if (guild == null)
+        {
+            throw new Exception("No guild found");
+        }
+        
+        var channel = guild.GetTextChannel(_winnerChannelId);
+        if (channel == null)
+        {
+            throw new Exception("No channel found");
+        }
+
+        var tracking = new Tracking(_userNames);
+        
+        var currentYear = DateTime.Now.Year;
+        await foreach (var page in channel.GetMessagesAsync(1000))
+        {
+            foreach (var message in page)
+            {
+                if (message.Timestamp.Year != currentYear)
+                {
+                    goto LoopEnd;
+                }
+
+                if (message.Author.Id == _botId)
+                {
+                    tracking.Feed(message.Content);
+                }
+            }
+        }
+        LoopEnd:
+        var reply = tracking.GetOutput();
+        await SendMessageAsync(_wordleChannelId, reply);
+    }
 
     private Task ProcessSeen(string word)
     {
         var upper = word.ToUpper();
         return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
     }
+    #endregion
+
+    
 
     private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)
     {
