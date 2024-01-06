@@ -30,7 +30,7 @@ public class Command
 
     public static Command Seen(string word)
     {
-        return new Command(CommandType.Seen, null, word);
+        return new Command(CommandType.Find, null, word);
     }
 
     public static Command Unknown()
@@ -44,6 +44,6 @@ public enum CommandType
     List,
     End,
     RoundUp,
-    Seen,
+    Find,
     Unknown
 }

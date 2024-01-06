@@ -171,8 +171,8 @@ public class DiscordBot
             case CommandType.RoundUp:
                 return ProcessRoundup();
             
-            case CommandType.Seen:
-                return ProcessSeen(command.Word!);
+            case CommandType.Find:
+                return ProcessFind(command.Word!);
             
             case CommandType.Unknown:
             default:
@@ -269,7 +269,7 @@ public class DiscordBot
         await SendMessageAsync(_wordleChannelId, reply);
     }
 
-    private Task ProcessSeen(string word)
+    private Task ProcessFind(string word)
     {
         var upper = word.ToUpper();
         return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
