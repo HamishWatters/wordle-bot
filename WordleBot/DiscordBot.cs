@@ -142,6 +142,11 @@ public class DiscordBot
 
     private Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
+        if (message.Author.Id == _botId)
+        {
+            return Task.CompletedTask;
+        }
+        
         var maybeCommand = _commandParser.Parse(message.Content, message.Timestamp);
         if (maybeCommand != null)
         {
