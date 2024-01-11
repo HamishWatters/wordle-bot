@@ -31,23 +31,7 @@ public static class WordleProcessor
             throw new DataException($"Wordle day was not a number: {daysString}");
         }
 
-        var attemptsString = match.Groups[2].Value;
-        int attemptScore;
-        int attempts;
-        if (attemptsString == "X")
-        {
-            attemptScore = 10;
-            attempts = 6;
-        }
-        else if (int.TryParse(attemptsString, out attemptScore))
-        {
-            attempts = attemptScore;
-        }
-        else
-        {
-            // regex should have already refused this
-            throw new DataException($"Wordle attempts was not a number: {attemptsString}");
-        }
+        var (attemptScore, attempts) = GetAttemptsFromString(match.Groups[2].Value);
 
         var lines = input.Split('\n');
         if (lines.Length - 2 != attempts)
@@ -65,6 +49,21 @@ public static class WordleProcessor
         }
         
         return WordleValidateResult.Success(days, attemptScore);
+    }
+
+    private static (int, int) GetAttemptsFromString(string matchGroup)
+    {
+        if (matchGroup == "X")
+        {
+            return (10, 6);
+        }
+        if (int.TryParse(matchGroup, out var attemptScore))
+        {
+            return (attemptScore, attemptScore);
+        }
+        
+        // regex should have already refused this
+        throw new DataException($"Wordle attempts was not a number: {matchGroup}");
     }
 
     public static WordleAnnouncementResult IsAnnouncement(string input)
