@@ -349,13 +349,14 @@ public class DiscordBot
             day.Announced = true;
             var answer = await _answerProvider.GetAsync(dayNumber);
             var names = await GetDisplayNameMap(day.Results.Keys);
+            _log.Information($"Announcing result for {dayNumber}");
             await SendMessageAsync(_winnerChannelId,
                 day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat,
                     _messageConfig.RunnersUpFormat, names, answer));
         }
         else
         {
-            _log.Information($"Not sending result for {dayNumber} because it's announced");
+            _log.Debug($"Not sending result for {dayNumber} because it's announced");
         }
     }  
 
