@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Wordle Bot config",
+  "description": "Configuration options for Wordle Bot Discord bot used to track members Wordle answers and results",
+  "type": "object",
+  "properties": {
+    "apiToken": {
+      "type": "string",
+      "description": "API token for the Discord API provided by Discord"
+    },
+    "testMode": {
+      "type": "boolean",
+      "description": "Dev option to put the bot in test mode, where any outgoing messages are logged rather than being actually sent to Discord"
+    },
+    "requiredUsers": {
+      "type": "array",
+      "description": "List of Discord user IDs who are required to submit an answer before the bot will automatically announce the results",
+      "items": {
+        "type": "number"
+      }
+    },
+    "admins": {
+      "type": "array",
+      "description": "List of Discord user IDs who are marked as admins and allowed to run privileged commands",
+      "items": {
+        "type": "number"
+      }
+    },
+    "guildChannel": {
+      "type": "number",
+      "description": "Discord guild ID for the Guild the bot should be working in"
+    },
+    "wordleChannel": {
+      "type": "number",
+      "description": "Text channel ID the bot should examine for users Wordle results"
+    },
+    "winnerChannel": {
+      "type": "number",
+      "description": "Text channel ID the bot should post winner announcements in"
+    }
+  }
+}
