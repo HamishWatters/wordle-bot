@@ -79,7 +79,15 @@ public class CommandParserTest
     {
         _commandParser.Parse("wordle-bot find crane", DateTimeOffset.Now)
             .Should()
-            .BeEquivalentTo(Command.Seen("crane"));
+            .BeEquivalentTo(Command.Seen("crane", false));
+    }
+
+    [Fact]
+    public void Parse_Seen_Spoiler()
+    {
+        _commandParser.Parse("wordle-bot find ||claim||", DateTimeOffset.Now)
+            .Should()
+            .BeEquivalentTo(Command.Seen("claim", true));
     }
 
     [Fact]

@@ -179,7 +179,7 @@ public class DiscordBot
                 return ProcessRoundup();
             
             case CommandType.Find:
-                return ProcessFind(command.Word!);
+                return ProcessFind(command);
             
             case CommandType.Help:
                 return ProcessHelp();
@@ -279,9 +279,13 @@ public class DiscordBot
         await SendMessageAsync(_wordleChannelId, reply);
     }
 
-    private Task ProcessFind(string word)
+    private Task ProcessFind(Command command)
     {
-        var upper = word.ToUpper();
+        var upper = command.Word!.ToUpper();
+        if (command.Spoiler != null && command.Spoiler!.Value)
+        {
+            upper = $"||{upper}||";
+        }
         return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
     }
 

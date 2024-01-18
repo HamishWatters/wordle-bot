@@ -78,6 +78,11 @@ public class CommandParser
 
     private static Command ParseSeen(string input)
     {
-        return input.Length != 5 ? Command.Unknown() : Command.Seen(input);
+        return input.Length switch
+        {
+            5 => Command.Seen(input, false),
+            9 when input.StartsWith("||") && input.EndsWith("||") => Command.Seen(input.Substring(2, 5), true),
+            _ => Command.Unknown()
+        };
     }
 }
