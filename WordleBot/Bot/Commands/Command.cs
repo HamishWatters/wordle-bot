@@ -30,7 +30,7 @@ public class Command
         return new Command(CommandType.RoundUp);
     }
 
-    public static Command Seen(string word, bool spoiler)
+    public static Command Find(string word, bool spoiler)
     {
         return new Command(CommandType.Find, null, word, spoiler);
     }

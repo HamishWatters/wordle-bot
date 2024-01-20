@@ -2,16 +2,22 @@ using Discord;
 using Discord.WebSocket;
 using Serilog;
 using WordleBot.Answer;
+using WordleBot.Bot;
+using WordleBot.Bot.Commands;
 using WordleBot.Commands;
 using WordleBot.Config;
 using WordleBot.Result;
 using WordleBot.Wordle;
+using MessageResult = WordleBot.Result.MessageResult;
+using MessageResultType = WordleBot.Result.MessageResultType;
 
 namespace WordleBot;
 
 public class DiscordBot
 {
     private readonly ILogger _log;
+    private readonly IMessageService _messageService;
+    
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
     private readonly ulong _winnerChannelId;
@@ -25,7 +31,6 @@ public class DiscordBot
     
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results;
-    private readonly CommandParser _commandParser;
 
     private readonly AnswerProvider _answerProvider;
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
@@ -35,6 +40,8 @@ public class DiscordBot
     public DiscordBot(Config.Config config, ILogger log)
     {
         _log = log;
+        var commandService = new CommandService(config.Command);
+        _messageService = new MessageService(config, commandService);
         _answerProvider = new AnswerProvider(log);
         
         _guildId = config.GuildChannel;
@@ -69,8 +76,6 @@ public class DiscordBot
         var requiredNames = config.RequiredUsers;
         _results = new BotResults(day => requiredNames.All(id => day.Results.ContainsKey(id)));
 
-         _commandParser = new CommandParser(config.Command);
-        
         ScheduleDailyPollBackground(config.ScheduledCheckTime);
     }
 
@@ -94,8 +99,8 @@ public class DiscordBot
             var date = DateOnly.FromDateTime(DateTime.Now);
             var n = (int)(date.ToDateTime(TimeOnly.MinValue) - WordleUtil.DayOne.ToDateTime(TimeOnly.MinValue)).TotalDays;
 
-            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, HandleWinnerChannelMessageAsync);
-            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, HandleWordleChannelMessageAsync);
+            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, _messageService.HandleWinnerMessageAsync);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, _messageService.HandleWordleMessageAsync);
             _log.Information("Startup finished");
         }
         catch (Exception e)
@@ -146,64 +151,13 @@ public class DiscordBot
         {
             return Task.CompletedTask;
         }
-        
-        var maybeCommand = _commandParser.Parse(message.Content, message.Timestamp);
-        if (maybeCommand != null)
-        {
-            if (live)
-            {
-                return ProcessCommand(message.Author.Id, maybeCommand);
-            }
-        }
-        else
-        {
-            var response = _results.ReceiveWordleMessage(message.Author.Id, message.Timestamp, message.Content);
-            return HandleMessageResultAsync(response, message.Author.Id, live);
-        }
 
-        return Task.CompletedTask;
+        var result = _messageService.HandleWordleMessageAsync(message, live);
+
+        throw new NotImplementedException();
     }
     
     #region CommandHandlers
-    private Task ProcessCommand(ulong id, Command command)
-    {
-        switch (command.Type)
-        {
-            case CommandType.List:
-                return ProcessList(command.Day!.Value);
-            
-            case CommandType.End:
-                return ProcessEnd(id, command.Day!.Value);
-            
-            case CommandType.RoundUp:
-                return ProcessRoundup();
-            
-            case CommandType.Find:
-                return ProcessFind(command);
-            
-            case CommandType.Help:
-                return ProcessHelp();
-            
-            case CommandType.Unknown:
-            default:
-                _log.Warning("Unknown command");
-                return SendMessageAsync(_wordleChannelId, _messageConfig.CommandUnknown);
-        }
-    }
-    
-    private async Task ProcessList(int day)
-    {
-        if (_results.Results.TryGetValue(day, out var dayResult))
-        {
-            var names = await GetDisplayNameMap(dayResult.Results.Keys);
-            await SendMessageAsync(_wordleChannelId, dayResult.GetListForMsg(_messageConfig.RunnersUpFormat, names));
-        }
-        else
-        {
-            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandUnknownDay, day));
-        }
-    }
-
     private async Task ProcessEnd(ulong id, int day)
     {
         if (_adminIds.Contains(id))
@@ -297,7 +251,7 @@ public class DiscordBot
     private Task ProcessHelp()
     {
         var response = string.Format(_messageConfig.Help, _commandConfig.List, _commandConfig.End,
-            _commandConfig.RoundUp, _commandConfig.Seen);
+            _commandConfig.RoundUp, _commandConfig.Find);
         return SendMessageAsync(_wordleChannelId, response);
     }
     #endregion
