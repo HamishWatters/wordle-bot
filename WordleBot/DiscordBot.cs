@@ -282,11 +282,16 @@ public class DiscordBot
     private Task ProcessFind(Command command)
     {
         var upper = command.Word!.ToUpper();
+        string sendValue;
         if (command.Spoiler != null && command.Spoiler!.Value)
         {
-            upper = $"||{upper}||";
+            sendValue = $"||{upper}||";
         }
-        return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{upper} was the answer on {date}" : $"{upper} has not been the answer before");
+        else
+        {
+            sendValue = upper;
+        }
+        return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{sendValue} was the answer on {date}" : $"{sendValue} has not been the answer before");
     }
 
     private Task ProcessHelp()
