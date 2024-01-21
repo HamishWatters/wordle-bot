@@ -87,7 +87,7 @@ public class WordleService: IWordleService
         
         if (!_results.ContainsKey(day))
         {
-            _results[day] = new Day(day);
+            _results[day] = new Day();
         }
 
         var dayResult = _results[day];
@@ -121,7 +121,7 @@ public class WordleService: IWordleService
         var day = announcementResult.Day!.Value;
         if (!_results.TryGetValue(day, out var value))
         {
-            value = new Day(day);
+            value = new Day();
             _results[day] = value;
         }
 

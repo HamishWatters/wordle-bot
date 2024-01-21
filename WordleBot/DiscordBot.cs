@@ -4,11 +4,7 @@ using Serilog;
 using WordleBot.Answer;
 using WordleBot.Bot;
 using WordleBot.Bot.Commands;
-using WordleBot.Config;
-using WordleBot.Result;
 using WordleBot.Wordle;
-using MessageResult = WordleBot.Result.MessageResult;
-using MessageResultType = WordleBot.Result.MessageResultType;
 
 namespace WordleBot;
 
@@ -16,6 +12,7 @@ public class DiscordBot: IMessageProvider
 {
     private readonly ILogger _log;
     private readonly MessageService _messageService;
+    private readonly WordleService _wordleService;
 
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
@@ -23,13 +20,8 @@ public class DiscordBot: IMessageProvider
     private readonly ulong _botId;
     
     private readonly bool _testMode;
-    private readonly MessageConfig _messageConfig;
     
     private readonly DiscordSocketClient _discordClient;
-    private readonly BotResults _results;
-
-    private readonly AnswerProvider _answerProvider;
-    private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
     public DiscordBot(Config.Config config, ILogger log)
     {
@@ -40,7 +32,6 @@ public class DiscordBot: IMessageProvider
         _winnerChannelId = config.WinnerChannel;
         _botId = config.Bot;
         _testMode = config.TestMode;
-        _messageConfig = config.Message;
         
         var discordConfig = new DiscordSocketConfig
         {
@@ -61,19 +52,16 @@ public class DiscordBot: IMessageProvider
             return Task.CompletedTask;
         };
 
-        var requiredNames = config.RequiredUsers;
-        _results = new BotResults(day => requiredNames.All(id => day.Results.ContainsKey(id)));
-
         ScheduleDailyPollBackground(config.ScheduledCheckTime);
         
-        _answerProvider = new AnswerProvider(log);
+        var answerProvider = new AnswerProvider(log);
         var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
-        var wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, _answerProvider, this);
+        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, answerProvider, this);
         var commandService = new CommandService(
             log, config.Command, config.Message, config.Admins, config.UserNames,
-            wordleService, displayNameProvider, this
+            _wordleService, displayNameProvider, this
         );
-        _messageService = new MessageService(config, wordleService, commandService);
+        _messageService = new MessageService(config, _wordleService, commandService);
     }
 
     public async Task Launch(string token)
@@ -124,7 +112,7 @@ public class DiscordBot: IMessageProvider
 
         if (channelId == _winnerChannelId)
         {
-            return HandleWinnerChannelMessageAsync(message, true);
+            return HandleWinnerChannelMessageAsync(message);
         }
 
         return Task.CompletedTask;
@@ -156,108 +144,31 @@ public class DiscordBot: IMessageProvider
         }
 
         var result = await _messageService.HandleWordleMessageAsync(message, live);
-        if (result.Type == Bot.MessageResultType.NoOp)
+        if (result.Type == MessageResultType.NoOp)
         {
             return;
         }
 
         var targetChannelId = result.Type switch
         {
-            Bot.MessageResultType.ForWordle => _wordleChannelId,
-            Bot.MessageResultType.ForWinner => _winnerChannelId,
+            MessageResultType.ForWordle => _wordleChannelId,
+            MessageResultType.ForWinner => _winnerChannelId,
             _ => throw new ArgumentOutOfRangeException()
         };
 
         await SendMessageAsync(targetChannelId, result.Content!);
     }
     
-    private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)
-    {
-        var ret = new Dictionary<ulong, string>();
-        var tasks = ids.Select(async id => ret[id] = await ResolveName(id));
-        await Task.WhenAll(tasks);
-        return ret;
-    }
-
-    private Task HandleWinnerChannelMessageAsync(IMessage message, bool live)
+    private Task HandleWinnerChannelMessageAsync(IMessage message)
     {
         if (message.Author.Id != _botId)
         {
             // Only process announcements that the bot sent
             return Task.CompletedTask;
         }
-
-        var response = _results.ReceiveWinnerMessage(message.Content);
-        _previousAnswerTracking.Feed(message.Content);
-        return HandleMessageResultAsync(response, message.Author.Id, live);
-    }
-
-    private async Task HandleMessageResultAsync(MessageResult response, ulong id, bool live)
-    {
-        switch (response.Type)
-        {
-            case MessageResultType.Continue:
-                // nothing happened
-                break;
-            
-            case MessageResultType.Winner:
-                // message had a new result, check for winner
-                await TryAnnounceDayAsync(response.Day!.Value);
-                break;
-
-            case MessageResultType.AlreadySubmitted:
-                if (live)
-                {
-                    var name = await ResolveName(id);
-                    await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.AlreadySubmittedFormat, name, response.Day));
-                }
-
-                break;
-            
-        }
-    }
-
-    private async Task TryAnnounceDayAsync(int dayNumber)
-    {
-        var day = _results.Results[dayNumber];
-        if (!day.Announced)
-        {
-            day.Announced = true;
-            var answer = await _answerProvider.GetAsync(dayNumber);
-            var names = await GetDisplayNameMap(day.Results.Keys);
-            _log.Information($"Announcing result for {dayNumber}");
-            await SendMessageAsync(_winnerChannelId,
-                day.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat,
-                    _messageConfig.RunnersUpFormat, names, answer));
-        }
-        else
-        {
-            _log.Debug($"Not sending result for {dayNumber} because it's announced");
-        }
-    }  
-
-    private async Task<string> ResolveName(ulong userId, string fallbackName = "?????")
-    {
-        try
-        {
-            var user = await _discordClient.GetUserAsync(userId);
-            if (user == null)
-            {
-                return fallbackName;
-            }
-
-            if (user.GlobalName != null)
-            {
-                return user.GlobalName;
-            }
-
-            return user.Username ?? fallbackName;
-        }
-        catch (Exception e)
-        {
-            _log.Warning(e, $"Error resolving name '{userId}'");
-            return fallbackName;
-        }
+        
+        _messageService.HandleWinnerMessage(message);
+        return Task.CompletedTask;
     }
 
     private async Task SendMessageAsync(ulong channelId, string message)
@@ -311,14 +222,13 @@ public class DiscordBot: IMessageProvider
             _log.Information("Executing daily poll...");
             var dayNumber = nextPollDay.DayNumber - WordleUtil.DayOne.DayNumber;
 
-            if (!_results.Results.ContainsKey(dayNumber))
+            if (!_wordleService.TryGetResult(dayNumber, out _))
             {
                 _log.Information($"Nobody has done day {dayNumber}, skipping daily poll");
             }
-            else
-            {
-                await TryAnnounceDayAsync(dayNumber);
-            }
+
+            var announcementResult = await _wordleService.GetAnnouncementAsync(dayNumber);
+            await SendMessageAsync(_winnerChannelId, announcementResult.Content!);
 
             nextPollDay = nextPollDay.AddDays(1);
         }
