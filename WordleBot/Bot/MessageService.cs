@@ -1,4 +1,5 @@
 using Discord;
+using Serilog;
 using WordleBot.Bot.Commands;
 using WordleBot.Wordle;
 
@@ -16,8 +17,9 @@ public class MessageService(Config.Config config,
         {
             return Task.FromResult(result);
         }
+        
 
-        if (commandService.TryParseCommand(message.Content, message.Timestamp, out var messageResult))
+        if (live && commandService.TryParseCommand(message.Content, message.Timestamp, out var messageResult))
         {
             return commandService.ProcessCommand(message.Author.Id, messageResult);
         }

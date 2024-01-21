@@ -14,30 +14,17 @@ public class WordleService: IWordleService
     private readonly IEnumerable<ulong> _requiredUsers;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IAnswerProvider _answerProvider;
-    private readonly IMessageProvider _messageProvider;
     
     private readonly Dictionary<int, Day> _results = new();
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
     public WordleService(MessageConfig messageConfig, IEnumerable<ulong> requiredUsers, 
-        IDisplayNameProvider displayNameProvider, IAnswerProvider answerProvider, IMessageProvider messageProvider)
+        IDisplayNameProvider displayNameProvider, IAnswerProvider answerProvider)
     {
         _messageConfig = messageConfig;
         _requiredUsers = requiredUsers;
         _displayNameProvider = displayNameProvider;
         _answerProvider = answerProvider;
-        _messageProvider = messageProvider;
-
-        BuildWords();
-    }
-
-    private async void BuildWords()
-    {
-        var messages = _messageProvider.GetWinnerMessageEnumerator(2000);
-        await foreach (var message in messages)
-        {
-            _previousAnswerTracking.Feed(message);
-        }
     }
     
     public bool TryGetResult(int dayNumber, out Day result)

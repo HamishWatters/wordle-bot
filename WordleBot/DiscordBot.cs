@@ -56,7 +56,7 @@ public class DiscordBot: IMessageProvider
         
         var answerProvider = new AnswerProvider(log);
         var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
-        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, answerProvider, this);
+        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, answerProvider);
         var commandService = new CommandService(
             log, config.Command, config.Message, config.Admins, config.UserNames,
             _wordleService, displayNameProvider, this
@@ -84,14 +84,17 @@ public class DiscordBot: IMessageProvider
             var date = DateOnly.FromDateTime(DateTime.Now);
             var n = (int)(date.ToDateTime(TimeOnly.MinValue) - WordleUtil.DayOne.ToDateTime(TimeOnly.MinValue)).TotalDays;
 
+            _log.Information("Bot is ready");
             await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3,
                 (message, _) =>
                 {
                     _messageService.HandleWinnerMessage(message);
                     return Task.CompletedTask;
                 });
-            
+
+            _log.Information($"Processed {n * 3} messages from the winner channel");
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, _messageService.HandleWordleMessageAsync);
+            _log.Information("Processed 1000 messages from the wordle channel");
             _log.Information("Startup finished");
         }
         catch (Exception e)
@@ -239,7 +242,7 @@ public class DiscordBot: IMessageProvider
         var guild = _discordClient.GetGuild(_guildId);
         if (guild == null)
         {
-            throw new Exception("No guild found");
+            throw new Exception($"No guild found for {_guildId}");
         }
         
         var channel = guild.GetTextChannel(_winnerChannelId);
