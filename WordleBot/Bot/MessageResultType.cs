@@ -2,5 +2,7 @@ namespace WordleBot.Bot;
 
 public enum MessageResultType
 {
-    NoOp
+    NoOp,
+    ForWordle,
+    ForWinner
 }

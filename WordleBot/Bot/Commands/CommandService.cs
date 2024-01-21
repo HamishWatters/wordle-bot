@@ -1,54 +1,53 @@
+using System.Text;
+using Serilog;
 using WordleBot.Commands;
 using WordleBot.Config;
+using WordleBot.Result;
 using WordleBot.Wordle;
 
 namespace WordleBot.Bot.Commands;
 
-public class CommandService(CommandConfig config)
+public class CommandService(ILogger log, CommandConfig config, MessageConfig messageConfig, ICollection<ulong> adminIds, IDictionary<string, IList<string>> userNames,
+    IWordleService wordleService, IDisplayNameProvider displayNameProvider, IMessageProvider messageProvider)
     : ICommandService
 {
-    private readonly string _commandPrefix = config.Prefix;
-    private readonly string _listCommand = config.List;
-    private readonly string _endCommand = config.End;
-    private readonly string _roundupCommand = config.RoundUp;
-    private readonly string _findCommand = config.Find;
-    private readonly string _helpCommand = config.Help;
-
+    private DateTime _nextAllowedRoundup = DateTime.Now;
+    
     public bool TryParseCommand(string content, DateTimeOffset timestamp, out Command command)
     {
         var loweredContent = content.ToLowerInvariant();
-        if (!loweredContent.StartsWith(_commandPrefix))
+        if (!loweredContent.StartsWith(config.Prefix))
         {
             command = Command.Unknown();
             return false;
         }
 
-        var commandContent = loweredContent[_commandPrefix.Length..].TrimStart();
-        if (commandContent.StartsWith(_listCommand))
+        var commandContent = loweredContent[config.Prefix.Length..].TrimStart();
+        if (commandContent.StartsWith(config.List))
         {
-            command = ParseList(commandContent[_listCommand.Length..].TrimStart(), timestamp);
+            command = ParseList(commandContent[config.List.Length..].TrimStart(), timestamp);
             return true;
         }
 
-        if (commandContent.StartsWith(_endCommand))
+        if (commandContent.StartsWith(config.End))
         {
-            command = ParseEnd(commandContent[_endCommand.Length..].TrimStart());
+            command = ParseEnd(commandContent[config.End.Length..].TrimStart());
             return true;
         }
 
-        if (commandContent.StartsWith(_roundupCommand))
+        if (commandContent.StartsWith(config.RoundUp))
         {
             command = Command.RoundUp();
             return true;
         }
 
-        if (commandContent.StartsWith(_findCommand))
+        if (commandContent.StartsWith(config.Find))
         {
-            command = ParseFind(commandContent[_findCommand.Length..].TrimStart());
+            command = ParseFind(commandContent[config.Find.Length..].TrimStart());
             return true;
         }
 
-        if (commandContent.StartsWith(_helpCommand))
+        if (commandContent.StartsWith(config.Help))
         {
             command = Command.Help();
             return true;
@@ -87,8 +86,128 @@ public class CommandService(CommandConfig config)
         };
     }
 
-    public MessageResult ProcessCommand(ulong userId, Command command)
+    public Task<MessageResult> ProcessCommand(ulong userId, Command command)
     {
-        throw new NotImplementedException();
+        switch (command.Type)
+        {
+            case CommandType.List:
+                return ProcessListAsync(command.Day!.Value);
+            
+            case CommandType.End:
+                return ProcessEnd(userId, command.Day!.Value);
+            
+            case CommandType.RoundUp:
+                return ProcessRoundupAsync();
+            
+            case CommandType.Find:
+                return ProcessFind(command);
+            
+            case CommandType.Help:
+                return ProcessHelp();
+            
+            case CommandType.Unknown:
+            default:
+                log.Warning("Unknown command");
+                return Task.FromResult(new MessageResult(MessageResultType.ForWordle, messageConfig.CommandUnknown));
+        }
     }
+
+    #region List
+    private Task<MessageResult> ProcessListAsync(int day)
+    {
+        return wordleService.TryGetResult(day, out var dayResult) 
+            ? BuildDayMessageAsync(dayResult) 
+            : Task.FromResult(new MessageResult(MessageResultType.ForWordle, string.Format(messageConfig.CommandUnknownDay, day)));
+    }
+
+    private async Task<MessageResult> BuildDayMessageAsync(Day result)
+    {
+        var resultList = result.GetSortedList();
+        var builder = new StringBuilder();
+        for (var i = 0; i < resultList.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append('\n');
+            }
+
+            var userResult = resultList[i];
+            var name = await displayNameProvider.GetAsync(userResult.Key);
+            builder.Append(string.Format(messageConfig.RunnersUpFormat, i + 1, name, userResult.Value.Score));
+        }
+
+        return new MessageResult(MessageResultType.ForWordle, builder.ToString());
+    }
+    #endregion
+
+    private Task<MessageResult> ProcessEnd(ulong id, int commandDay)
+    {
+        if (!adminIds.Contains(id))
+        {
+            var displayName = displayNameProvider.GetAsync(id);
+            return Task.FromResult(new MessageResult(MessageResultType.ForWordle,
+                string.Format(messageConfig.CommandNotAdmin, displayName)));
+        }
+
+        if (!wordleService.TryGetResult(commandDay, out _))
+        {
+            return Task.FromResult(new MessageResult(MessageResultType.ForWordle,
+                string.Format(messageConfig.CommandUnknownDay, commandDay)));
+        }
+
+        return wordleService.GetAnnouncementAsync(commandDay);
+    }
+
+    #region Roundup
+    private async Task<MessageResult> ProcessRoundupAsync()
+    {
+        var now = DateTime.Now;
+        if (now.CompareTo(_nextAllowedRoundup) < 0)
+        {
+            return new MessageResult(MessageResultType.ForWordle, messageConfig.RoundupEarly);
+        }
+
+        _nextAllowedRoundup = DateTime.Now.AddMinutes(5);
+
+        var messages = messageProvider.GetWinnerMessageEnumerator(1000, DateTime.Now.Year);
+        var tracking = new Tracking(userNames);
+        
+        await foreach (var message in messages)
+        {
+            tracking.Feed(message);
+        }
+        
+        return new MessageResult(MessageResultType.ForWordle, tracking.GetOutput());
+    }
+    #endregion
+
+    #region Find
+    private Task<MessageResult> ProcessFind(Command command)
+    {
+        var upper = command.Word!.ToUpper();
+        string sendValue;
+        if (command.Spoiler != null && command.Spoiler!.Value)
+        {
+            sendValue = $"||{upper}||";
+        }
+        else
+        {
+            sendValue = upper;
+        }
+
+        var date = wordleService.GetDateForAnswer(upper);
+        return Task.FromResult(new MessageResult(MessageResultType.ForWordle,
+            date != null ? $"{sendValue} was the answer on {date}" : $"{sendValue} has not been the answer before"));
+    }
+    #endregion
+    
+    #region Help
+    private Task<MessageResult> ProcessHelp()
+    {
+        var response = string.Format(messageConfig.Help, config.List, config.End,
+            config.RoundUp, config.Find);
+
+        return Task.FromResult(new MessageResult(MessageResultType.ForWordle, response));
+    }
+    #endregion
 }

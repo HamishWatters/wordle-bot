@@ -17,7 +17,7 @@ public class MessageService(Config.Config config, ICommandService commandService
 
         if (commandService.TryParseCommand(message.Content, message.Timestamp, out var messageResult))
         {
-            return Task.FromResult(commandService.ProcessCommand(message.Author.Id, messageResult));
+            return commandService.ProcessCommand(message.Author.Id, messageResult);
         }
 
         throw new NotImplementedException();

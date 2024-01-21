@@ -5,5 +5,5 @@ namespace WordleBot.Bot.Commands;
 public interface ICommandService
 {
     bool TryParseCommand(string content, DateTimeOffset timestamp, out Command command);
-    MessageResult ProcessCommand(ulong userId, Command command);
+    Task<MessageResult> ProcessCommand(ulong userId, Command command);
 }

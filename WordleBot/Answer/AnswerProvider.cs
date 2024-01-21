@@ -4,15 +4,8 @@ using WordleBot.Wordle;
 
 namespace WordleBot.Answer;
 
-public class AnswerProvider
+public class AnswerProvider(ILogger log): IAnswerProvider
 {
-    private readonly ILogger _log;
-
-    public AnswerProvider(ILogger log)
-    {
-        _log = log;
-    }
-    
     private readonly HttpClient _http = new();
 
     public async Task<string?> GetAsync(int day)
@@ -30,12 +23,12 @@ public class AnswerProvider
             var answer = JsonSerializer.Deserialize<AnswerResponse>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             if (answer != null) return answer.Solution.ToUpper();
             
-            _log.Error($"Failed to parse JSON: {json}");
+            log.Error($"Failed to parse JSON: {json}");
             return null;
         }
         catch (Exception e)
         {
-            _log.Error(e, $"Failed to get answer for day {day}");
+            log.Error(e, $"Failed to get answer for day {day}");
             return null;
         }
     }

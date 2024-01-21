@@ -61,7 +61,7 @@ public class Day(int dayNumber)
         return builder.ToString();
     }
 
-    private List<KeyValuePair<ulong, User>> GetSortedList()
+    public List<KeyValuePair<ulong, User>> GetSortedList()
     {
         var results = Results.ToList();
         results.Sort((a, b) =>

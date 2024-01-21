@@ -4,7 +4,6 @@ using Serilog;
 using WordleBot.Answer;
 using WordleBot.Bot;
 using WordleBot.Bot.Commands;
-using WordleBot.Commands;
 using WordleBot.Config;
 using WordleBot.Result;
 using WordleBot.Wordle;
@@ -13,10 +12,11 @@ using MessageResultType = WordleBot.Result.MessageResultType;
 
 namespace WordleBot;
 
-public class DiscordBot
+public class DiscordBot: IMessageProvider
 {
     private readonly ILogger _log;
-    private readonly IMessageService _messageService;
+    private readonly MessageService _messageService;
+    private readonly IWordleService _wordleService;
     
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
@@ -24,10 +24,7 @@ public class DiscordBot
     private readonly ulong _botId;
     
     private readonly bool _testMode;
-    private readonly IList<ulong> _adminIds;
     private readonly MessageConfig _messageConfig;
-    private readonly CommandConfig _commandConfig;
-    private readonly IDictionary<string, IList<string>> _userNames;
     
     private readonly DiscordSocketClient _discordClient;
     private readonly BotResults _results;
@@ -35,24 +32,16 @@ public class DiscordBot
     private readonly AnswerProvider _answerProvider;
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
-    private DateTime _nextAllowedRoundup = DateTime.Now;
-
     public DiscordBot(Config.Config config, ILogger log)
     {
         _log = log;
-        var commandService = new CommandService(config.Command);
-        _messageService = new MessageService(config, commandService);
-        _answerProvider = new AnswerProvider(log);
         
         _guildId = config.GuildChannel;
         _wordleChannelId = config.WordleChannel;
         _winnerChannelId = config.WinnerChannel;
         _botId = config.Bot;
         _testMode = config.TestMode;
-        _adminIds = config.Admins;
         _messageConfig = config.Message;
-        _commandConfig = config.Command;
-        _userNames = config.UserNames;
         
         var discordConfig = new DiscordSocketConfig
         {
@@ -77,6 +66,15 @@ public class DiscordBot
         _results = new BotResults(day => requiredNames.All(id => day.Results.ContainsKey(id)));
 
         ScheduleDailyPollBackground(config.ScheduledCheckTime);
+        
+        _answerProvider = new AnswerProvider(log);
+        var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
+        _wordleService = new WordleService(config.Message, displayNameProvider, _answerProvider, this);
+        var commandService = new CommandService(
+            log, config.Command, config.Message, config.Admins, config.UserNames,
+            _wordleService, displayNameProvider, this
+        );
+        _messageService = new MessageService(config, commandService);
     }
 
     public async Task Launch(string token)
@@ -157,107 +155,6 @@ public class DiscordBot
         throw new NotImplementedException();
     }
     
-    #region CommandHandlers
-    private async Task ProcessEnd(ulong id, int day)
-    {
-        if (_adminIds.Contains(id))
-        {
-            if (_results.Results.TryGetValue(day, out var dayResult))
-            {
-                var answer = await _answerProvider.GetAsync(day);
-                var names = await GetDisplayNameMap(dayResult.Results.Keys);
-                await SendMessageAsync(_winnerChannelId,
-                    dayResult.GetWinMessage(_messageConfig.WinnerFormat, _messageConfig.TodaysAnswerFormat,
-                        _messageConfig.RunnersUpFormat, names, answer));
-            }
-            else
-            {
-                await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandUnknownDay, day));
-            }
-        }
-        else
-        {
-            var name = await ResolveName(id);
-            await SendMessageAsync(_wordleChannelId, string.Format(_messageConfig.CommandNotAdmin, name));
-        }
-    }
-
-    private async Task ProcessRoundup()
-    {
-        var now = DateTime.Now;
-        if (now.CompareTo(_nextAllowedRoundup) < 0)
-        {
-            await SendMessageAsync(_wordleChannelId, _messageConfig.RoundupEarly);
-            return;
-        }
-
-        await CheckYearAsync();
-    }
-    
-    private async Task CheckYearAsync()
-    {
-        _nextAllowedRoundup = DateTime.Now.AddMinutes(5);
-        
-        var guild = _discordClient.GetGuild(_guildId);
-        if (guild == null)
-        {
-            throw new Exception("No guild found");
-        }
-        
-        var channel = guild.GetTextChannel(_winnerChannelId);
-        if (channel == null)
-        {
-            throw new Exception("No channel found");
-        }
-
-        var tracking = new Tracking(_userNames);
-        
-        var currentYear = DateTime.Now.Year;
-        await foreach (var page in channel.GetMessagesAsync(1000))
-        {
-            foreach (var message in page)
-            {
-                if (message.Timestamp.Year != currentYear)
-                {
-                    goto LoopEnd;
-                }
-
-                if (message.Author.Id == _botId)
-                {
-                    tracking.Feed(message.Content);
-                }
-            }
-        }
-        LoopEnd:
-        var reply = tracking.GetOutput();
-        await SendMessageAsync(_wordleChannelId, reply);
-    }
-
-    private Task ProcessFind(Command command)
-    {
-        var upper = command.Word!.ToUpper();
-        string sendValue;
-        if (command.Spoiler != null && command.Spoiler!.Value)
-        {
-            sendValue = $"||{upper}||";
-        }
-        else
-        {
-            sendValue = upper;
-        }
-        return SendMessageAsync(_wordleChannelId, _previousAnswerTracking.PreviousAnswers.TryGetValue(upper, out var date) ? $"{sendValue} was the answer on {date}" : $"{sendValue} has not been the answer before");
-    }
-
-    private Task ProcessHelp()
-    {
-        var response = string.Format(_messageConfig.Help, _commandConfig.List, _commandConfig.End,
-            _commandConfig.RoundUp, _commandConfig.Find);
-        return SendMessageAsync(_wordleChannelId, response);
-    }
-    #endregion
-
-    
-
     private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)
     {
         var ret = new Dictionary<ulong, string>();
@@ -408,6 +305,37 @@ public class DiscordBot
             }
 
             nextPollDay = nextPollDay.AddDays(1);
+        }
+    }
+
+    public async IAsyncEnumerable<string> GetWinnerMessageEnumerator(int limit, int? year = null)
+    {
+        var guild = _discordClient.GetGuild(_guildId);
+        if (guild == null)
+        {
+            throw new Exception("No guild found");
+        }
+        
+        var channel = guild.GetTextChannel(_winnerChannelId);
+        if (channel == null)
+        {
+            throw new Exception("No channel found");
+        }
+
+        await foreach (var page in channel.GetMessagesAsync(limit))
+        {
+            foreach (var message in page)
+            {
+                if (year != null && message.Timestamp.Year != year)
+                {
+                    yield break;
+                }
+
+                if (message.Author.Id == _botId)
+                {
+                    yield return message.Content;
+                }
+            }
         }
     }
 }
