@@ -11,6 +11,7 @@ namespace WordleBot.Wordle;
 public class WordleService: IWordleService
 {
     private readonly MessageConfig _messageConfig;
+    private readonly IEnumerable<ulong> _requiredUsers;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IAnswerProvider _answerProvider;
     private readonly IMessageProvider _messageProvider;
@@ -18,9 +19,11 @@ public class WordleService: IWordleService
     private readonly Dictionary<int, Day> _results = new();
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
-    public WordleService(MessageConfig messageConfig, IDisplayNameProvider displayNameProvider, IAnswerProvider answerProvider, IMessageProvider messageProvider)
+    public WordleService(MessageConfig messageConfig, IEnumerable<ulong> requiredUsers, 
+        IDisplayNameProvider displayNameProvider, IAnswerProvider answerProvider, IMessageProvider messageProvider)
     {
         _messageConfig = messageConfig;
+        _requiredUsers = requiredUsers;
         _displayNameProvider = displayNameProvider;
         _answerProvider = answerProvider;
         _messageProvider = messageProvider;
@@ -70,5 +73,37 @@ public class WordleService: IWordleService
     public DateOnly? GetDateForAnswer(string word)
     {
         return _previousAnswerTracking.PreviousAnswers.TryGetValue(word, out var date) ? date : null;
+    }
+
+    public async Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent)
+    {
+        var validateResult = WordleProcessor.Validate(messageContent);
+
+        if (validateResult.Type != WordleValidateResultType.Success)
+        {
+            return new MessageResult(MessageResultType.NoOp);
+        }
+        var day = validateResult.Day!.Value;
+        
+        if (!_results.ContainsKey(day))
+        {
+            _results[day] = new Day(day);
+        }
+
+        var dayResult = _results[day];
+        if (dayResult.Results.ContainsKey(userId))
+        {
+            return new MessageResult(MessageResultType.NoOp);
+        }
+
+        var score = WordleProcessor.Score(validateResult, messageContent);
+        dayResult.Results[userId] = new User(timestamp, validateResult.Attempts!.Value, score);
+
+        if (_requiredUsers.All(dayResult.Results.ContainsKey))
+        {
+            return await GetAnnouncementAsync(day);
+        }
+
+        return new MessageResult(MessageResultType.NoOp);
     }
 }

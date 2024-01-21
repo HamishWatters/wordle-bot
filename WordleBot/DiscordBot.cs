@@ -69,12 +69,12 @@ public class DiscordBot: IMessageProvider
         
         _answerProvider = new AnswerProvider(log);
         var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
-        _wordleService = new WordleService(config.Message, displayNameProvider, _answerProvider, this);
+        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, _answerProvider, this);
         var commandService = new CommandService(
             log, config.Command, config.Message, config.Admins, config.UserNames,
             _wordleService, displayNameProvider, this
         );
-        _messageService = new MessageService(config, commandService);
+        _messageService = new MessageService(config, _wordleService, commandService);
     }
 
     public async Task Launch(string token)
@@ -143,16 +143,27 @@ public class DiscordBot: IMessageProvider
         }
     }
 
-    private Task HandleWordleChannelMessageAsync(IMessage message, bool live)
+    private async Task HandleWordleChannelMessageAsync(IMessage message, bool live)
     {
         if (message.Author.Id == _botId)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var result = _messageService.HandleWordleMessageAsync(message, live);
+        var result = await _messageService.HandleWordleMessageAsync(message, live);
+        if (result.Type == Bot.MessageResultType.NoOp)
+        {
+            return;
+        }
 
-        throw new NotImplementedException();
+        var targetChannelId = result.Type switch
+        {
+            Bot.MessageResultType.ForWordle => _wordleChannelId,
+            Bot.MessageResultType.ForWinner => _winnerChannelId,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        await SendMessageAsync(targetChannelId, result.Content!);
     }
     
     private async Task<Dictionary<ulong, string>> GetDisplayNameMap(IEnumerable<ulong> ids)

@@ -1,9 +1,10 @@
 using Discord;
 using WordleBot.Bot.Commands;
+using WordleBot.Wordle;
 
 namespace WordleBot.Bot;
 
-public class MessageService(Config.Config config, ICommandService commandService) : IMessageService
+public class MessageService(Config.Config config, IWordleService wordleService, ICommandService commandService) : IMessageService
 {
     private readonly ulong _botId = config.Bot;
 
@@ -20,7 +21,7 @@ public class MessageService(Config.Config config, ICommandService commandService
             return commandService.ProcessCommand(message.Author.Id, messageResult);
         }
 
-        throw new NotImplementedException();
+        return wordleService.TryProcessWordleAsync(message.Author.Id, message.Timestamp, message.Content);
     }
 
     public Task<MessageResult> HandleWinnerMessageAsync(IMessage message, bool live)
