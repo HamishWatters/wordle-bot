@@ -18,8 +18,4 @@
       <Compile Remove="Commands\Command.cs" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Commands\" />
-    </ItemGroup>
-
 </Project>

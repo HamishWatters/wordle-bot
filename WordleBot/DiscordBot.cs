@@ -16,8 +16,7 @@ public class DiscordBot: IMessageProvider
 {
     private readonly ILogger _log;
     private readonly MessageService _messageService;
-    private readonly IWordleService _wordleService;
-    
+
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
     private readonly ulong _winnerChannelId;
@@ -69,12 +68,12 @@ public class DiscordBot: IMessageProvider
         
         _answerProvider = new AnswerProvider(log);
         var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
-        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, _answerProvider, this);
+        var wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, _answerProvider, this);
         var commandService = new CommandService(
             log, config.Command, config.Message, config.Admins, config.UserNames,
-            _wordleService, displayNameProvider, this
+            wordleService, displayNameProvider, this
         );
-        _messageService = new MessageService(config, _wordleService, commandService);
+        _messageService = new MessageService(config, wordleService, commandService);
     }
 
     public async Task Launch(string token)
@@ -97,7 +96,13 @@ public class DiscordBot: IMessageProvider
             var date = DateOnly.FromDateTime(DateTime.Now);
             var n = (int)(date.ToDateTime(TimeOnly.MinValue) - WordleUtil.DayOne.ToDateTime(TimeOnly.MinValue)).TotalDays;
 
-            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3, _messageService.HandleWinnerMessageAsync);
+            await ReadyHandlerChannel(guild, _winnerChannelId, "winner", n * 3,
+                (message, _) =>
+                {
+                    _messageService.HandleWinnerMessage(message);
+                    return Task.CompletedTask;
+                });
+            
             await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, _messageService.HandleWordleMessageAsync);
             _log.Information("Startup finished");
         }

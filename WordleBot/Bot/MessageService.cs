@@ -4,7 +4,8 @@ using WordleBot.Wordle;
 
 namespace WordleBot.Bot;
 
-public class MessageService(Config.Config config, IWordleService wordleService, ICommandService commandService) : IMessageService
+public class MessageService(Config.Config config, 
+    IWordleService wordleService, ICommandService commandService) : IMessageService
 {
     private readonly ulong _botId = config.Bot;
 
@@ -24,8 +25,11 @@ public class MessageService(Config.Config config, IWordleService wordleService, 
         return wordleService.TryProcessWordleAsync(message.Author.Id, message.Timestamp, message.Content);
     }
 
-    public Task<MessageResult> HandleWinnerMessageAsync(IMessage message, bool live)
+    public void HandleWinnerMessage(IMessage message)
     {
-        throw new NotImplementedException();
+        if (config.Bot == message.Author.Id)
+        {
+            wordleService.ProcessWinnerMessage(message.Content);
+        }
     }
 }

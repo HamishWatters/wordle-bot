@@ -9,4 +9,5 @@ public interface IWordleService
     Task<MessageResult> GetAnnouncementAsync(int commandDay);
     DateOnly? GetDateForAnswer(string word);
     Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent);
+    void ProcessWinnerMessage(string messageContent);
 }

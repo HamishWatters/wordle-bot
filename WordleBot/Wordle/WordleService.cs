@@ -106,4 +106,25 @@ public class WordleService: IWordleService
 
         return new MessageResult(MessageResultType.NoOp);
     }
+
+    public void ProcessWinnerMessage(string messageContent)
+    {
+        var announcementResult = WordleProcessor.IsAnnouncement(messageContent);
+
+        if (announcementResult.Type != WordleAnnouncementResultType.Success)
+        {
+            return;
+        }
+        
+        _previousAnswerTracking.Feed(messageContent);
+        
+        var day = announcementResult.Day!.Value;
+        if (!_results.TryGetValue(day, out var value))
+        {
+            value = new Day(day);
+            _results[day] = value;
+        }
+
+        value.Announced = true;
+    }
 }
