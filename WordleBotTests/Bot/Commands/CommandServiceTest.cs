@@ -1,14 +1,29 @@
 using FluentAssertions;
+using NSubstitute;
+using Serilog;
+using WordleBot.Bot;
 using WordleBot.Bot.Commands;
 using WordleBot.Commands;
 using WordleBot.Config;
+using WordleBot.Wordle;
 
 namespace WordleBotTests.Bot.Commands;
 
 public class CommandServiceTest
 {
-    private readonly CommandService _commandService = new(new CommandConfig());
+    private readonly ILogger _log = Substitute.For<ILogger>();
+    private readonly List<ulong> _adminIds = new();
+    private readonly Dictionary<string, IList<string>> _userNames = new();
+    private readonly IWordleService _wordleService = Substitute.For<IWordleService>();
+    private readonly IDisplayNameProvider _displayNameProvider = Substitute.For<IDisplayNameProvider>();
+    private readonly IMessageProvider _messageProvider = Substitute.For<IMessageProvider>();
     
+    private readonly CommandService _commandService;
+
+    public CommandServiceTest()
+    {
+        _commandService = new(_log, new CommandConfig(), new MessageConfig(), _adminIds, _userNames, _wordleService, _displayNameProvider, _messageProvider);
+    }
     [Fact]
     public void Parse_List_Optimistic()
     {
@@ -48,7 +63,7 @@ public class CommandServiceTest
     {
         _commandService.TryParseCommand("wordle-bot end", DateTimeOffset.Now, out var command)
             .Should().BeTrue();
-        command.Should().BeEquivalentTo(Command.Unknown);
+        command.Should().BeEquivalentTo(Command.Unknown());
     }
 
     [Fact]

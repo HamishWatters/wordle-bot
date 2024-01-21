@@ -7,7 +7,8 @@ using WordleBot.Wordle;
 
 namespace WordleBot.Bot.Commands;
 
-public class CommandService(ILogger log, CommandConfig config, MessageConfig messageConfig, ICollection<ulong> adminIds, IDictionary<string, IList<string>> userNames,
+public class CommandService(ILogger log, CommandConfig config, MessageConfig messageConfig, 
+    ICollection<ulong> adminIds, IDictionary<string, IList<string>> userNames,
     IWordleService wordleService, IDisplayNameProvider displayNameProvider, IMessageProvider messageProvider)
     : ICommandService
 {
@@ -59,10 +60,14 @@ public class CommandService(ILogger log, CommandConfig config, MessageConfig mes
 
     private static Command ParseList(string input, DateTimeOffset timestamp)
     {
-        var dayString = input.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)[0];
-        if (!string.IsNullOrWhiteSpace(dayString))
+        var split = input.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (split.Length > 0)
         {
-            return int.TryParse(dayString, out var days) ? Command.List(days) : Command.Unknown();
+            var dayString = split[0];
+            if (!string.IsNullOrWhiteSpace(dayString))
+            {
+                return int.TryParse(dayString, out var days) ? Command.List(days) : Command.Unknown();
+            }
         }
 
         var date = DateOnly.FromDateTime(timestamp.Date);
