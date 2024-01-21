@@ -13,6 +13,7 @@ public class DiscordBot: IMessageProvider
     private readonly ILogger _log;
     private readonly MessageService _messageService;
     private readonly WordleService _wordleService;
+    private readonly DisplayNameProvider _displayNameProvider;
 
     private readonly ulong _guildId;
     private readonly ulong _wordleChannelId;
@@ -55,11 +56,11 @@ public class DiscordBot: IMessageProvider
         ScheduleDailyPollBackground(config.ScheduledCheckTime);
         
         var answerProvider = new AnswerProvider(log);
-        var displayNameProvider = new DisplayNameProvider(_log, _discordClient);
-        _wordleService = new WordleService(config.Message, config.RequiredUsers, displayNameProvider, answerProvider);
+        _displayNameProvider = new DisplayNameProvider(_log, _discordClient);
+        _wordleService = new WordleService(config.Message, config.RequiredUsers, _displayNameProvider, answerProvider);
         var commandService = new CommandService(
             log, config.Command, config.Message, config.Admins, config.UserNames,
-            _wordleService, displayNameProvider, this
+            _wordleService, _displayNameProvider, this
         );
         _messageService = new MessageService(config, _wordleService, commandService);
     }
@@ -232,6 +233,7 @@ public class DiscordBot: IMessageProvider
 
             var announcementResult = await _wordleService.GetAnnouncementAsync(dayNumber);
             await SendMessageAsync(_winnerChannelId, announcementResult.Content!);
+            _displayNameProvider.ClearCache(); // let names refresh once per day 
 
             nextPollDay = nextPollDay.AddDays(1);
         }

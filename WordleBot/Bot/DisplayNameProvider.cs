@@ -19,6 +19,11 @@ public class DisplayNameProvider(ILogger log, IDiscordClient discordClient): IDi
         return name;
     }
 
+    public void ClearCache()
+    {
+        _cache.Clear();
+    }
+
     private async Task<string> FindAsync(ulong userId)
     {
         try
