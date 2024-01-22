@@ -50,7 +50,7 @@ public class WordleService: IWordleService
         for (var i = 1; i < results.Count; i++)
         {
             builder.Append('\n');
-            var name = _displayNameProvider.GetAsync(results[i].Key);
+            var name = await _displayNameProvider.GetAsync(results[i].Key);
             builder.Append(string.Format(_messageConfig.RunnersUpFormat, i + 1, name, results[i].Value.Score));
         }
 
