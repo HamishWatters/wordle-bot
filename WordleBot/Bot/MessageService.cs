@@ -1,5 +1,4 @@
 using Discord;
-using Serilog;
 using WordleBot.Bot.Commands;
 using WordleBot.Wordle;
 

@@ -8,25 +8,16 @@ using MessageResultType = WordleBot.Bot.MessageResultType;
 
 namespace WordleBot.Wordle;
 
-public class WordleService: IWordleService
+public class WordleService(
+    MessageConfig messageConfig,
+    IEnumerable<ulong> requiredUsers,
+    IDisplayNameProvider displayNameProvider,
+    IAnswerProvider answerProvider)
+    : IWordleService
 {
-    private readonly MessageConfig _messageConfig;
-    private readonly IEnumerable<ulong> _requiredUsers;
-    private readonly IDisplayNameProvider _displayNameProvider;
-    private readonly IAnswerProvider _answerProvider;
-    
     private readonly Dictionary<int, Day> _results = new();
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
-    public WordleService(MessageConfig messageConfig, IEnumerable<ulong> requiredUsers, 
-        IDisplayNameProvider displayNameProvider, IAnswerProvider answerProvider)
-    {
-        _messageConfig = messageConfig;
-        _requiredUsers = requiredUsers;
-        _displayNameProvider = displayNameProvider;
-        _answerProvider = answerProvider;
-    }
-    
     public bool TryGetResult(int dayNumber, out Day result)
     {
         return _results.TryGetValue(dayNumber, out result!);
@@ -38,20 +29,20 @@ public class WordleService: IWordleService
         var results = dayResults.GetSortedList();
         var builder = new StringBuilder();
         var winner = results[0];
-        var winnerName = await _displayNameProvider.GetAsync(winner.Key);
-        builder.Append(string.Format(_messageConfig.WinnerFormat, day, winnerName, winner.Value.Attempts, winner.Value.Score));
-        var answer = await _answerProvider.GetAsync(day);
+        var winnerName = await displayNameProvider.GetAsync(winner.Key);
+        builder.Append(string.Format(messageConfig.WinnerFormat, day, winnerName, winner.Value.Attempts, winner.Value.Score));
+        var answer = await answerProvider.GetAsync(day);
         if (answer != null)
         {
             builder.Append('\n');
-            builder.Append(string.Format(_messageConfig.TodaysAnswerFormat, answer));
+            builder.Append(string.Format(messageConfig.TodaysAnswerFormat, answer));
         }
 
         for (var i = 1; i < results.Count; i++)
         {
             builder.Append('\n');
-            var name = await _displayNameProvider.GetAsync(results[i].Key);
-            builder.Append(string.Format(_messageConfig.RunnersUpFormat, i + 1, name, results[i].Value.Score));
+            var name = await displayNameProvider.GetAsync(results[i].Key);
+            builder.Append(string.Format(messageConfig.RunnersUpFormat, i + 1, name, results[i].Value.Score));
         }
 
         return new MessageResult(MessageResultType.ForWinner, builder.ToString());
@@ -86,7 +77,7 @@ public class WordleService: IWordleService
         var score = WordleProcessor.Score(validateResult, messageContent);
         dayResult.Results[userId] = new User(timestamp, validateResult.Attempts!.Value, score);
 
-        if (_requiredUsers.All(dayResult.Results.ContainsKey))
+        if (!dayResult.Announced && requiredUsers.All(dayResult.Results.ContainsKey))
         {
             return await GetAnnouncementAsync(day);
         }

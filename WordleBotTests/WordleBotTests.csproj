@@ -27,8 +27,4 @@
       <ProjectReference Include="..\WordleBot\WordleBot.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Bot\" />
-    </ItemGroup>
-
 </Project>
