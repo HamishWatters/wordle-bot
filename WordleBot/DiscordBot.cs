@@ -226,9 +226,17 @@ public class DiscordBot: IMessageProvider
             _log.Information("Executing daily poll...");
             var dayNumber = nextPollDay.DayNumber - WordleUtil.DayOne.DayNumber;
 
-            if (!_wordleService.TryGetResult(dayNumber, out _))
+            if (_wordleService.TryGetResult(dayNumber, out var result))
+            {
+                if (result.Announced)
+                {
+                    continue;
+                }
+            }
+            else
             {
                 _log.Information($"Nobody has done day {dayNumber}, skipping daily poll");
+                continue;
             }
 
             var announcementResult = await _wordleService.GetAnnouncementAsync(dayNumber);
