@@ -18,9 +18,19 @@ public class WordleService(
     private readonly Dictionary<int, Day> _results = new();
     private readonly PreviousAnswerTracking _previousAnswerTracking = new();
 
-    public bool TryGetResult(int dayNumber, out Day result)
+    public bool TryGetResult(int dayNumber, bool allowAnnounced, out Day result)
     {
-        return _results.TryGetValue(dayNumber, out result!);
+        if (_results.TryGetValue(dayNumber, out var res))
+        {
+            if (!res.Announced || allowAnnounced)
+            {
+                result = res;
+                return true;
+            }
+        }
+
+        result = new Day();
+        return false;
     }
 
     public async Task<MessageResult> GetAnnouncementAsync(int day)

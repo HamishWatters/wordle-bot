@@ -120,7 +120,7 @@ public class CommandService(ILogger log, CommandConfig config, MessageConfig mes
     #region List
     private Task<MessageResult> ProcessListAsync(int day)
     {
-        return wordleService.TryGetResult(day, out var dayResult) 
+        return wordleService.TryGetResult(day, true, out var dayResult) 
             ? BuildDayMessageAsync(dayResult) 
             : Task.FromResult(new MessageResult(MessageResultType.ForWordle, string.Format(messageConfig.CommandUnknownDay, day)));
     }
@@ -154,7 +154,7 @@ public class CommandService(ILogger log, CommandConfig config, MessageConfig mes
                 string.Format(messageConfig.CommandNotAdmin, displayName)));
         }
 
-        if (!wordleService.TryGetResult(commandDay, out _))
+        if (!wordleService.TryGetResult(commandDay, true, out _))
         {
             return Task.FromResult(new MessageResult(MessageResultType.ForWordle,
                 string.Format(messageConfig.CommandUnknownDay, commandDay)));
