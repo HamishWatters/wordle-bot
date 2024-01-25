@@ -1,6 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
 using Serilog;
+using WordleBot;
 using WordleBot.Bot;
 using WordleBot.Bot.Commands;
 using WordleBot.Commands;

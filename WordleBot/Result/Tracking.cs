@@ -10,7 +10,7 @@ public class Tracking(IDictionary<string, IList<string>> userNames)
         @"^(\d+) - (.+): (\d+) points$"
     );
     
-    private readonly IDictionary<string, string> _displayNameToUserName = FlattenUserNames(userNames);
+    private readonly Dictionary<string, string> _displayNameToUserName = FlattenUserNames(userNames);
 
     private readonly Dictionary<string, TrackingUser> _users = new();
     private readonly HashSet<int> _daysPassed = [];

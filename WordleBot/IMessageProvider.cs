@@ -1,4 +1,4 @@
-namespace WordleBot.Bot;
+namespace WordleBot;
 
 public interface IMessageProvider
 {

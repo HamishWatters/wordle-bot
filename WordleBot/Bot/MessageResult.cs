@@ -8,6 +8,6 @@ public struct MessageResult
         Content = content;
     }
 
-    public MessageResultType Type { get; set; } = MessageResultType.NoOp;
-    public string? Content { get; set; } = null;
+    public MessageResultType Type { get; } = MessageResultType.NoOp;
+    public string? Content { get; } = null;
 }
