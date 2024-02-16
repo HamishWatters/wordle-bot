@@ -159,6 +159,11 @@ public class DiscordBot: IMessageProvider
             MessageResultType.ForWinner => _winnerChannelId,
             _ => throw new ArgumentOutOfRangeException()
         };
+        
+        if (result.Wait != null)
+        {
+            await Task.Delay(result.Wait.Value);
+        }
 
         await SendMessageAsync(targetChannelId, result.Content!);
     }

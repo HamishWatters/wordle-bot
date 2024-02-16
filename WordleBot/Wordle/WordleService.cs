@@ -100,7 +100,7 @@ public class WordleService(
             }
 
             var index = new Random().Next(responses.Count - 1);
-            return new MessageResult(MessageResultType.ForWordle, responses[index]);
+            return new MessageResult(MessageResultType.ForWordle, responses[index], 1500);
         }
 
         return new MessageResult(MessageResultType.NoOp);
