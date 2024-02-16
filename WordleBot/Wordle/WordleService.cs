@@ -63,7 +63,7 @@ public class WordleService(
         return _previousAnswerTracking.PreviousAnswers.TryGetValue(word, out var date) ? date : null;
     }
 
-    public async Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent)
+    public async Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent, bool live)
     {
         var validateResult = WordleProcessor.Validate(messageContent);
 
@@ -92,7 +92,7 @@ public class WordleService(
             return await GetAnnouncementAsync(day);
         }
 
-        if (messageConfig.ResultResponses.TryGetValue(validateResult.Attempts!.Value, out var responses))
+        if (live && messageConfig.ResultResponses.TryGetValue(validateResult.Attempts!.Value, out var responses))
         {
             if (responses.Count == 0)
             {

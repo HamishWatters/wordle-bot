@@ -23,7 +23,7 @@ public class MessageService(Config.Config config,
             return commandService.ProcessCommand(message.Author.Id, messageResult);
         }
 
-        return wordleService.TryProcessWordleAsync(message.Author.Id, message.Timestamp, message.Content);
+        return wordleService.TryProcessWordleAsync(message.Author.Id, message.Timestamp, message.Content, live);
     }
 
     public void HandleWinnerMessage(IMessage message)

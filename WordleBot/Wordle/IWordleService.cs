@@ -8,6 +8,6 @@ public interface IWordleService
     bool TryGetResult(int dayNumber, bool allowAnnounced, out Day day);
     Task<MessageResult> GetAnnouncementAsync(int commandDay);
     DateOnly? GetDateForAnswer(string word);
-    Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent);
+    Task<MessageResult> TryProcessWordleAsync(ulong userId, DateTimeOffset timestamp, string messageContent, bool live);
     void ProcessWinnerMessage(string messageContent);
 }
