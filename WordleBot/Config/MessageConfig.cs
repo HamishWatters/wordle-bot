@@ -20,4 +20,6 @@ public class MessageConfig
         
                                        
     public string CommandUnknown { get; set; } = "Unknown command";
+
+    public IDictionary<int, IList<string>> ResultResponses { get; set; } = new Dictionary<int, IList<string>>();
 }

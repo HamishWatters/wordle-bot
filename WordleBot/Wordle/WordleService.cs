@@ -92,6 +92,17 @@ public class WordleService(
             return await GetAnnouncementAsync(day);
         }
 
+        if (messageConfig.ResultResponses.TryGetValue(validateResult.Attempts!.Value, out var responses))
+        {
+            if (responses.Count == 0)
+            {
+                return new MessageResult(MessageResultType.NoOp);
+            }
+
+            var index = new Random().Next(responses.Count - 1);
+            return new MessageResult(MessageResultType.ForWordle, responses[index]);
+        }
+
         return new MessageResult(MessageResultType.NoOp);
     }
 
