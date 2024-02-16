@@ -121,21 +121,17 @@ public class CommandService(ILogger log, CommandConfig config, MessageConfig mes
     private Task<MessageResult> ProcessListAsync(int day)
     {
         return wordleService.TryGetResult(day, true, out var dayResult) 
-            ? BuildDayMessageAsync(dayResult) 
+            ? BuildDayMessageAsync(day, dayResult) 
             : Task.FromResult(new MessageResult(MessageResultType.ForWordle, string.Format(messageConfig.CommandUnknownDay, day)));
     }
 
-    private async Task<MessageResult> BuildDayMessageAsync(Day result)
+    private async Task<MessageResult> BuildDayMessageAsync(int day, Day result)
     {
         var resultList = result.GetSortedList();
-        var builder = new StringBuilder();
+        var builder = new StringBuilder($"Wordle {day}");
         for (var i = 0; i < resultList.Count; i++)
         {
-            if (i > 0)
-            {
-                builder.Append('\n');
-            }
-
+            builder.Append('\n');
             var userResult = resultList[i];
             var name = await displayNameProvider.GetAsync(userResult.Key);
             builder.Append(string.Format(messageConfig.RunnersUpFormat, i + 1, name, userResult.Value.Score));
