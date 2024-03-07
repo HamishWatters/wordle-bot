@@ -70,7 +70,7 @@ public class CommandService(ILogger log, CommandConfig config, MessageConfig mes
             }
         }
 
-        var date = DateOnly.FromDateTime(timestamp.Date);
+        var date = DateOnly.FromDateTime(timestamp.LocalDateTime);
         var dayNumber = date.DayNumber - WordleUtil.DayOne.DayNumber;
         return Command.List(dayNumber);
     }
