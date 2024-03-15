@@ -23,6 +23,17 @@ public class WordleProcessorTest
     }
 
     [Fact]
+    public void Validate_Special1000Result_Works()
+    {
+        var input = "Wordle 1,000 🎉 3/6\n\n" +
+                    "⬜⬜⬜🟨🟩\n" +
+                    "⬜🟨🟨⬜🟩\n" +
+                    "🟩🟩🟩🟩🟩";
+        var result = WordleProcessor.Validate(input);
+        result.Should().BeEquivalentTo(WordleValidateResult.Success(1000, 3));
+    }
+
+    [Fact]
     public void Validate_Loss()
     {
         var input =

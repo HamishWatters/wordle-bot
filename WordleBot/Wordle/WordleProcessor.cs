@@ -8,7 +8,7 @@ public static class WordleProcessor
 {
     // Allow between 5 and 10 characters because the coloured squares all use two UTF-16 characters
     private static readonly Regex WordleRegex = new(
-        @"^Wordle (\d+) ([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
+        @"^Wordle ([\d,]+)( 🎉){0,1} ([1-6X])/6\n{2}(([⬜⬛🟨🟩🟦🟧]){5,10}\n){0,5}[⬜⬛🟨🟩🟦🟧]{5,10}$"
         );
 
     public static readonly Regex WinnerRegex = new(
@@ -24,14 +24,14 @@ public static class WordleProcessor
             return WordleValidateResult.Failure(WordleValidateResultType.RegexMismatch);
         }
 
-        var daysString = match.Groups[1].Value;
+        var daysString = match.Groups[1].Value.Replace(",", "");
         if (!int.TryParse(daysString, out var days))
         {
             // regex should have already refused this
             throw new DataException($"Wordle day was not a number: {daysString}");
         }
 
-        var (attemptScore, attempts) = GetAttemptsFromString(match.Groups[2].Value);
+        var (attemptScore, attempts) = GetAttemptsFromString(match.Groups[3].Value);
 
         var lines = input.Split('\n');
         if (lines.Length - 2 != attempts)

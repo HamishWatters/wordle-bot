@@ -94,7 +94,7 @@ public class DiscordBot: IMessageProvider
                 });
 
             _log.Information($"Processed {n * 3} messages from the winner channel");
-            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, _messageService.HandleWordleMessageAsync);
+            await ReadyHandlerChannel(guild, _wordleChannelId, "wordle", 1000, HandleWordleChannelMessageAsync);
             _log.Information("Processed 1000 messages from the wordle channel");
             _log.Information("Startup finished");
         }
